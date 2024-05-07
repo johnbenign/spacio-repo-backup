@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<session version="1.0">
+<refactoring comment="Move element &apos;MdxBCConfig-0.0.1-SNAPSHOT.jar&apos; to &apos;MdxBCConfig&apos;&#x0D;&#x0A;- Original project: &apos;MdxBCConfig&apos;&#x0D;&#x0A;- Destination element: &apos;MdxBCConfig&apos;&#x0D;&#x0A;- Original element: &apos;MdxBCConfig-0.0.1-SNAPSHOT.jar&apos;&#x0D;&#x0A;- Update references to refactored element" description="Move file" destination="=MdxBCConfig" element1="target/MdxBCConfig-0.0.1-SNAPSHOT.jar" files="1" flags="589830" folders="0" id="org.eclipse.jdt.ui.move" policy="org.eclipse.jdt.ui.moveResources" qualified="false" references="true" stamp="1640000274968" units="0" version="1.0"/>
+</session>

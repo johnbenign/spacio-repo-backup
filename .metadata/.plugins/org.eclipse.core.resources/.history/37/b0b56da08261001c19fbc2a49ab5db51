@@ -1,0 +1,250 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<parent>
+		<groupId>org.springframework.boot</groupId>
+		<artifactId>spring-boot-starter-parent</artifactId>
+		<version>2.3.4.RELEASE</version>
+		<relativePath/> <!-- lookup parent from repository -->
+	</parent>
+	<groupId>com.spacio.crx</groupId> 
+	<artifactId>CrxPortal</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+	<packaging>jar</packaging>
+	<name>CrxPortal</name>
+	<description>Web app that uses ZK, spring security and openmdx services. Also Configures mdx ui and eventually mdx bc modules</description>
+
+	<properties>
+		<java.version>1.8</java.version>
+		<maven.compiler.source>1.8</maven.compiler.source>
+        <maven.compiler.target>1.8</maven.compiler.target>
+		<zkspringboot.version>2.3.1</zkspringboot.version>
+		<zk.version>9.5.0.2</zk.version>
+		<spring.statemachine>2.2.2.BUILD-SNAPSHOT</spring.statemachine>
+		<mdx.version>2.1.5.7</mdx.version>
+		<crx.version>4.1</crx.version>			
+	</properties>
+
+    <repositories>
+   <!--  <repository>
+        <id>ZK CE</id>
+        <name>ZK CE Repository</name>
+        <url>http://mavensync.zkoss.org/maven2</url>
+    </repository>  
+    -->  
+     <repository> 
+        <id>repository.spring.snapshot</id> 
+        <name>Spring Snapshot Repository</name> 
+        <url>https://repo.spring.io/snapshot</url>
+        <snapshots>
+           <enabled>true</enabled>
+        </snapshots>
+    </repository> 
+    
+ </repositories>
+
+	<dependencies>                 
+	    <dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-security</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-web</artifactId>
+			<!-- <exclusions>
+                <exclusion>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-starter-tomcat</artifactId>
+                </exclusion>
+            </exclusions> -->
+		</dependency>
+		<!-- <dependency>
+            <groupId>javax.servlet</groupId>
+            <artifactId>javax.servlet-api</artifactId>
+            <scope>provided</scope>
+        </dependency> -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-devtools</artifactId>
+			<scope>runtime</scope>
+			<optional>true</optional>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-tomcat</artifactId>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.security</groupId>
+			<artifactId>spring-security-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+           <groupId>org.zkoss.zkspringboot</groupId>
+           <artifactId>zkspringboot-starter</artifactId>
+           <!-- <type>pom</type>
+           <version>${zkspringboot.version}</version> -->
+        </dependency>		
+        <dependency>
+			<groupId>org.zkoss.zk</groupId>
+			<artifactId>zkplus</artifactId>
+			<version>${zk.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.zkoss.theme</groupId>
+			<artifactId>breeze</artifactId>
+			<version>${zk.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.statemachine</groupId>
+			<artifactId>spring-statemachine-core</artifactId>
+			<version>${spring.statemachine}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.statemachine</groupId>
+			<artifactId>spring-statemachine-uml</artifactId>
+			<version>${spring.statemachine}</version>
+		</dependency>		
+		<dependency>
+             <groupId>cglib</groupId>
+             <artifactId>cglib</artifactId>
+             <version>2.2.2</version>
+        </dependency>      
+		<!-- <dependency>
+           <groupId>openmdx-base</groupId>
+           <artifactId>openmdx-base</artifactId>
+           <version>${mdx.version}</version>
+         </dependency>
+         <dependency>
+           <groupId>openmdx-system</groupId>
+           <artifactId>openmdx-system</artifactId>
+           <version>${mdx.version}</version>
+         </dependency>
+         <dependency>
+           <groupId>openmdx-security</groupId>
+           <artifactId>openmdx-security</artifactId>
+           <version>${mdx.version}</version>
+         </dependency>          
+         <dependency>
+           <groupId>com.spacio.mdx</groupId>
+           <artifactId>cloud_crm_model2</artifactId>
+           <version>2</version>
+         </dependency>
+         <dependency>
+           <groupId>opencrx-application</groupId>
+           <artifactId>opencrx-application</artifactId>
+           <version>${crx.version}</version>
+         </dependency> 
+         <dependency>
+           <groupId>opencrx-kernel</groupId>
+           <artifactId>opencrx-kernel</artifactId>
+           <version>${crx.version}</version>
+         </dependency> 
+         <dependency>
+           <groupId>opencrx-mail</groupId>
+           <artifactId>opencrx-mail</artifactId>
+          <version>${crx.version}</version>
+         </dependency> 
+         <dependency>
+           <groupId>opencrx-security</groupId>
+           <artifactId>opencrx-security</artifactId>
+           <version>${crx.version}</version>
+         </dependency> 
+         <dependency>
+           <groupId>openjpa</groupId>
+           <artifactId>openjpa</artifactId>
+          <version>${crx.version}</version>
+         </dependency>       -->
+        <!--  <dependency>
+           <groupId>com.spacio.app.mdxui1</groupId>
+           <artifactId>mdxui1</artifactId>
+           <version>${crx.version}</version>   
+         </dependency> -->
+         <dependency>
+           <groupId>sqljdbc4</groupId>
+           <artifactId>sqljdbc4</artifactId>
+           <version>4.1</version>
+         </dependency>
+         <dependency>
+			<groupId>org.apache.tomcat</groupId>
+			<artifactId>tomcat-dbcp</artifactId>
+			<version>8.0.23</version>
+		</dependency>
+		<!-- <dependency>
+           <groupId>resource</groupId>
+           <artifactId>resource</artifactId>
+           <version>2.1.5.7</version>
+         </dependency> -->
+          <dependency>
+           <groupId>com.spacio.crx</groupId>
+           <artifactId>CrxCustom</artifactId>
+           <version>0.0.1-SNAPSHOT</version>          
+         </dependency>  
+         <!--    <dependency>
+           <groupId>opencrx-rsk-golden-server</groupId>
+           <artifactId>opencrx-rsk-golden-server</artifactId>
+           <version>${crx.version}</version>   
+         </dependency>  -->
+         <dependency>
+           <groupId>com.spacio.mdx</groupId>
+           <artifactId>MdxBCConfig</artifactId>
+           <version>0.0.1-SNAPSHOT</version>          
+         </dependency> 
+         <!-- simple-jndi -->
+        <dependency>
+            <groupId>com.github.h-thurow</groupId>
+            <artifactId>simple-jndi</artifactId>
+            <version>0.23.0</version>
+        </dependency> 
+      <dependency>
+      <groupId>org.springframework</groupId>
+      <artifactId>spring-test</artifactId>     
+      <scope>test</scope>
+  </dependency>
+                      
+	</dependencies>
+
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.springframework.boot</groupId>
+				<artifactId>spring-boot-maven-plugin</artifactId>
+			</plugin>
+			<plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <compilerArguments>
+                        <source>1.8</source>
+                        <target>1.8</target>
+                    </compilerArguments>
+                </configuration>
+            </plugin>
+		</plugins>
+	</build>
+
+    <profiles>
+        <profile>
+            <id>dev</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <properties>
+                <spring.profiles.active>dev</spring.profiles.active>
+            </properties>
+        </profile>
+        <profile>
+            <id>prod</id>
+            <properties>
+                <spring.profiles.active>prod</spring.profiles.active>
+            </properties>
+        </profile>
+    </profiles>
+
+</project>

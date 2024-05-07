@@ -1,0 +1,53 @@
+package com.spacio.fm.core.home.bo.impl;
+
+import java.util.logging.Logger;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+
+import com.spacio.crx.bo.impl.GenericBOImpl;
+import com.spacio.crx.dto.ResponseDTO;
+import com.spacio.fm.core.home.bo.HomeBO;
+import com.spacio.fm.core.home.dao.HomeDAO;
+import com.spacio.fm.core.home.dto.CreateUserDTO;
+
+
+
+@Component("homeBO")
+public class HomeBOImpl extends GenericBOImpl implements HomeBO
+{
+
+	 private static final Logger logger = Logger.getLogger(HomeBOImpl.class.getName());
+		
+	 @Autowired
+	 private HomeDAO homeDAO;
+	
+	
+	public HomeBOImpl()
+	{
+		logger.info(" --- HomeBOImpl() --- ");
+	}
+
+
+
+	@Override
+	public ResponseDTO createFMUser(CreateUserDTO createUser)
+	{
+		logger.info(" --------   createUser   -------- ");
+		
+		ResponseDTO response = homeDAO.createFMUser(createUser);
+		
+		return response;
+	}
+	
+	@Override
+	public ResponseDTO createResidentUser(CreateUserDTO createUser)
+	{
+		logger.info(" --------   createUser   -------- ");
+		
+		ResponseDTO response = homeDAO.createResidentUser(createUser);
+		
+		return response;
+	}
+	
+}

@@ -1,0 +1,710 @@
+package com.spacio.fm.core.activity.dao.impl;
+
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.logging.Logger;
+
+import org.opencrx.kernel.account1.jmi1.Contact;
+import org.opencrx.kernel.activity1.cci2.ActivityTypeQuery;
+import org.opencrx.kernel.activity1.cci2.MeetingQuery;
+import org.opencrx.kernel.activity1.jmi1.Activity;
+import org.opencrx.kernel.activity1.jmi1.ActivityType;
+import org.opencrx.kernel.activity1.jmi1.Meeting;
+import org.opencrx.kernel.home1.jmi1.UserHome;
+import org.openmdx.base.dataprovider.layer.persistence.jdbc.spi.Database_1_Attributes;
+import org.openmdx.base.persistence.cci.PersistenceHelper;
+import org.openmdx.base.rest.cci.QueryExtensionRecord;
+import org.openmdx.kernel.exception.BasicException;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+import org.w3c.spi2.Datatypes;
+import org.w3c.spi2.Structures;
+
+import com.spacio.crm.extension1.jmi1.ReturnStatusT;
+import com.spacio.crx.bo.ConnectionManager;
+import com.spacio.crx.dao.impl.GenericDAOImpl;
+import com.spacio.crx.dto.ResponseDTO;
+import com.spacio.fm.core.activity.dao.EstateMeetingDAO;
+import com.spacio.fm.core.activity.dto.CreateEstateMeetingDTO;
+import com.spacio.fm.core.activity.dto.EstateMeetingDTO;
+import com.spacio.fm.core.activity.dto.EstateMeetingListDTO;
+import com.spacio.fm.core.activity.dto.FollowUpDTO;
+import com.spacio.fm.core.activity.mapper.EstateMeetingMapper;
+import com.spacio.fm.core.util.SegmentUtil;
+import com.spacio.fm.core.util.SpacioFmUtil;
+
+@Component
+public class EstateMeetingDAOImpl extends GenericDAOImpl implements EstateMeetingDAO
+{
+	private static final Logger logger = Logger.getLogger(EstateMeetingDAOImpl.class.getName());
+	
+	public static final String ACT_CREATOR_EST_MEETING = "Estate Meeting";
+	public static final String ACT_TYPE_EST_MEETING = "Estate Meeting";
+		
+	@Autowired
+	private ConnectionManager conMgr;
+
+	@Override
+	public ResponseDTO scheduleEstateMeeting(CreateEstateMeetingDTO estateMeeting)
+	{
+		logger.info(" --- about to schdule estate meeting --- ");
+		
+		ResponseDTO response = new ResponseDTO();
+		
+		try
+		{
+			pm = conMgr.getPersistenceManager(userId);
+			
+			SegmentUtil segmentUtil = new SegmentUtil("CRX", segmentName);
+			
+			org.opencrx.kernel.home1.jmi1.Segment userHomeSegment =  segmentUtil.getUserHomeSegment(pm);
+			
+			UserHome userHome = userHomeSegment.getUserHome(userId);
+			
+			if(userHome == null)
+			{
+				logger.info(" --- no user found with the given id --- ");
+				
+				response.setErrorMsg("user not found");
+				response.setResponse("user not found");
+				response.setResult(false);
+				
+				return response;
+			}
+			
+			Contact reportingContact = userHome.getContact();
+			
+			com.spacio.crm.extension1.jmi1.Segment extensionSegment = segmentUtil.getExtensionSegment(pm);
+			
+			com.spacio.crm.extension1.jmi1.ScheduleEstateMeetingParams in = Structures.create(
+					com.spacio.crm.extension1.jmi1.ScheduleEstateMeetingParams.class,
+	        		Datatypes.member(com.spacio.crm.extension1.jmi1.ScheduleEstateMeetingParams.Member.activityCreatorName, ACT_CREATOR_EST_MEETING),
+	        		Datatypes.member(com.spacio.crm.extension1.jmi1.ScheduleEstateMeetingParams.Member.name, estateMeeting.getName()),
+	        		Datatypes.member(com.spacio.crm.extension1.jmi1.ScheduleEstateMeetingParams.Member.problemDescription, estateMeeting.getDescription()),
+	        		Datatypes.member(com.spacio.crm.extension1.jmi1.ScheduleEstateMeetingParams.Member.reportingContactXri, reportingContact.getIdentity()),
+	        		Datatypes.member(com.spacio.crm.extension1.jmi1.ScheduleEstateMeetingParams.Member.accountParty, estateMeeting.getContactXris()),
+//	        		Datatypes.member(com.spacio.crm.extension1.jmi1.CreateEstateActivityParams.Member.scheduledEnd, new Date()),
+	        		Datatypes.member(com.spacio.crm.extension1.jmi1.ScheduleEstateMeetingParams.Member.dueBy, estateMeeting.getDueBy()),
+	        		Datatypes.member(com.spacio.crm.extension1.jmi1.ScheduleEstateMeetingParams.Member.phoneNumber, estateMeeting.getPhoneNumber()),
+//	        		Datatypes.member(com.spacio.crm.extension1.jmi1.CreateEstateActivityParams.Member.dueBy, new Date()),
+	        		Datatypes.member(com.spacio.crm.extension1.jmi1.ScheduleEstateMeetingParams.Member.operatorPriority, (short)0),
+	        		Datatypes.member(com.spacio.crm.extension1.jmi1.ScheduleEstateMeetingParams.Member.assignedToXri, null),
+	        		Datatypes.member(com.spacio.crm.extension1.jmi1.ScheduleEstateMeetingParams.Member.operatorId, userId)
+					);
+			
+			com.spacio.crm.extension1.jmi1.ScheduleEstateMeetingResult out = extensionSegment.scheduleEstateMeeting(in);
+			
+			if(out.isResult())
+			{
+				response.setResult(true);
+				response.setResponse(out.getTicketUri());
+				
+				logger.info(" --- estate meeting have been scheduled successfully!!! ---");
+			}
+			else
+			{
+				response.setErrorMsg(out.getErrorMsg());
+				response.setErrors(out.getErrors());
+				response.setResponse(out.getErrorMsg());
+				
+				return response;
+			}
+		}
+		catch(Exception e)
+		{
+			logger.info(" --- error: " + e.getMessage() + e);
+			
+			e.printStackTrace();
+			
+			response.setErrorMsg(e.getMessage());
+			response.setResponse(e);
+			response.setResult(false);
+		}
+		finally
+		{
+			if(!pm.isClosed())
+				pm.close();
+		}
+		
+		return response;
+	}
+
+	@Override
+	public ResponseDTO getAllScheduledEstateMeetings()
+	{
+		logger.info(" --- get all scheduled estate meetings --- ");
+		
+		ResponseDTO response = new ResponseDTO();
+		
+		try
+		{
+			List<EstateMeetingListDTO> estateMeetings = new ArrayList<>();
+			
+//			if(activityTypeId == null)
+//			{
+//				logger.severe(" --- no activity type id supplied --- ");
+//				
+//				response.setErrorMsg("no activity type id supplied");
+//				response.setResponse("no activity type id supplied");
+//				response.setResult(false);
+//				
+//				return response;
+//			}
+			
+			pm = conMgr.getPersistenceManager(userId);
+			
+			SegmentUtil segmentUtil = new SegmentUtil(providerName, segmentName);
+			
+			org.opencrx.kernel.activity1.jmi1.Segment activitySegment = segmentUtil.getActivitySegment(pm);
+			
+			ActivityTypeQuery activityTypeQuery = (ActivityTypeQuery) pm.newQuery(ActivityType.class);
+			
+			activityTypeQuery.name().equalTo(ACT_TYPE_EST_MEETING);
+			activityTypeQuery.orderByModifiedAt().descending();
+			
+			List<ActivityType> activityTypes = activitySegment.getActivityType(activityTypeQuery);
+			
+			if(activityTypes.isEmpty())
+			{
+				logger.info(" --- no activity type found with the given name, please contact admin --- ");
+				
+				response.setErrorMsg("no activity type found with the given name, please contact administrator");
+				response.setResponse("no activity type found with the given name, please contact administrator");
+				response.setResult(false);
+				
+				return response;
+			}
+			
+			logger.info(" ---  getting the activity type ---- ");
+			
+			ActivityType activityType = activityTypes.get(0);
+						
+//			if(activityType == null)
+//			{
+//				logger.severe(" --- no activity type found with the given id --- ");
+//				
+//				response.setErrorMsg("no activity type found with the given id");
+//				response.setResponse("no activity type found with the given id");
+//				response.setResult(false);
+//				
+//				return response;
+//			}
+						
+//			try
+//			{
+//				logger.info(" ---  getting the activity type ---- ");
+//				
+//				activityType = (ActivityType) pm.getObjectById(new Path(activityTypeXri));
+//			}
+//			catch(Exception ex)
+//			{
+//				logger.info(" --- no activity type found with the given xri --- ");
+//				
+//				throw new ServiceException(ex);
+//			}
+			
+			MeetingQuery query = (MeetingQuery) pm.newQuery(Meeting.class);
+			
+			query.thereExistsActivityType().equalTo(activityType);
+			query.orderByModifiedAt().descending();
+			
+			List<Meeting> meetings = activitySegment.getActivity(query);
+			
+			EstateMeetingMapper mapper = new EstateMeetingMapper();
+			
+			for(Meeting meeting : meetings)
+			{
+				EstateMeetingListDTO estateMeeting = mapper.geScheduledEstateMeetingList(meeting);
+				
+				estateMeetings.add(estateMeeting);
+			}
+			
+			response.setResponse(estateMeetings);
+			response.setResult(true);
+			
+			logger.info(" --- get all estate meetings fetched --- ");
+		}
+		catch(Exception e)
+		{
+			logger.severe("error: " + e.getMessage());
+			
+			response.setErrorMsg(e.getMessage());
+			response.setResponse(e.getMessage());
+			response.setResult(false);
+			
+			//e.printStackTrace();
+		}
+		finally
+		{
+			if(!pm.isClosed())
+				pm.close();
+		}
+		
+		return response;
+	}
+
+	@Override
+	public ResponseDTO getAllScheduledEstateMeetings(int index, int range)
+	{
+		logger.info(" --- get all scheduled estate meeting range --- ");
+		
+		ResponseDTO response = new ResponseDTO();
+		
+		try
+		{
+			List<EstateMeetingListDTO> estateMeetings = new ArrayList<>();
+			
+//			if(activityTypeId == null)
+//			{
+//				logger.severe(" --- no activity type id supplied --- ");
+//				
+//				response.setErrorMsg("no activity type id supplied");
+//				response.setResponse("no activity type id supplied");
+//				response.setResult(false);
+//				
+//				return response;
+//			}
+			
+			pm = conMgr.getPersistenceManager(userId);
+			
+			SegmentUtil segmentUtil = new SegmentUtil(providerName, segmentName);
+			
+			org.opencrx.kernel.activity1.jmi1.Segment activitySegment = segmentUtil.getActivitySegment(pm);
+			
+			ActivityTypeQuery activityTypeQuery = (ActivityTypeQuery) pm.newQuery(ActivityType.class);
+			
+			activityTypeQuery.name().equalTo(ACT_TYPE_EST_MEETING);
+			activityTypeQuery.orderByModifiedAt().descending();
+			
+			List<ActivityType> activityTypes = activitySegment.getActivityType(activityTypeQuery);
+			
+			if(activityTypes.isEmpty())
+			{
+				logger.info(" --- no activity type found with the given name, please contact admin --- ");
+				
+				response.setErrorMsg("no activity type found with the given name, please contact administrator");
+				response.setResponse("no activity type found with the given name, please contact administrator");
+				response.setResult(false);
+				
+				return response;
+			}
+			
+			logger.info(" ---  getting the activity type ---- ");
+			
+			ActivityType activityType = activityTypes.get(0);
+						
+//			if(activityType == null)
+//			{
+//				logger.severe(" --- no activity type found with the given id --- ");
+//				
+//				response.setErrorMsg("no activity type found with the given id");
+//				response.setResponse("no activity type found with the given id");
+//				response.setResult(false);
+//				
+//				return response;
+//			}
+						
+//			try
+//			{
+//				logger.info(" ---  getting the activity type ---- ");
+//				
+//				activityType = (ActivityType) pm.getObjectById(new Path(activityTypeXri));
+//			}
+//			catch(Exception ex)
+//			{
+//				logger.info(" --- no activity type found with the given xri --- ");
+//				
+//				throw new ServiceException(ex);
+//			}
+			
+			MeetingQuery query = (MeetingQuery) pm.newQuery(Meeting.class);
+			
+			query.thereExistsActivityType().equalTo(activityType);
+			query.orderByModifiedAt().descending();
+			
+			List<Meeting> meetings = activitySegment.getActivity(query);
+			
+			EstateMeetingMapper mapper = new EstateMeetingMapper();
+			
+			int count = 0;
+			
+			for(Iterator<Meeting> i = meetings.listIterator(index); i.hasNext();)
+			{
+				Meeting meeting = i.next();
+				
+				EstateMeetingListDTO estateMeeting = mapper.geScheduledEstateMeetingList(meeting);
+				
+				estateMeetings.add(estateMeeting);
+				
+				count++;
+				
+				logger.info("range count: " + count);
+				
+	            if(count > range)
+	            {
+	                break;
+	            }
+			}
+			
+			response.setResponse(estateMeetings);
+			response.setResult(true);
+			
+			logger.info(" --- get all estate meeting range fetched --- ");
+		}
+		catch(Exception e)
+		{
+			logger.severe("error: " + e.getMessage());
+			
+			response.setErrorMsg(e.getMessage());
+			response.setResponse(e.getMessage());
+			response.setResult(false);
+		}
+		finally
+		{
+			if(!pm.isClosed())
+				pm.close();
+		}
+		
+		return response;
+	}
+
+	@Override
+	public int getAllScheduledEstateMeetingsSize()
+	{
+		logger.info(" --- get all scheduled estate meeting size --- ");
+		
+		int count = 0;
+		
+		try
+		{
+//			if(activityTypeId == null)
+//			{
+//				logger.severe(" --- no activity type id supplied --- ");
+//				
+//				return 0;
+//			}
+			
+			pm = conMgr.getPersistenceManager(userId);
+			
+			SegmentUtil segmentUtil = new SegmentUtil(providerName, segmentName);
+			
+			org.opencrx.kernel.activity1.jmi1.Segment activitySegment = segmentUtil.getActivitySegment(pm);
+			
+			ActivityTypeQuery activityTypeQuery = (ActivityTypeQuery) pm.newQuery(ActivityType.class);
+			
+			activityTypeQuery.name().equalTo(ACT_TYPE_EST_MEETING);
+			activityTypeQuery.orderByModifiedAt().descending();
+			
+			List<ActivityType> activityTypes = activitySegment.getActivityType(activityTypeQuery);
+			
+			if(activityTypes.isEmpty())
+			{
+				logger.info(" --- no activity type found with the given name, please contact admin --- ");
+				
+				return 0;
+			}
+			
+			logger.info(" ---  getting the activity type ---- ");
+			
+			ActivityType activityType = activityTypes.get(0);
+						
+//			if(activityType == null)
+//			{
+//				logger.severe(" --- no activity type found with the given id --- ");
+//				
+//				return 0;
+//			}
+						
+//			try
+//			{
+//				logger.info(" ---  getting the activity type ---- ");
+//				
+//				activityType = (ActivityType) pm.getObjectById(new Path(activityTypeId));
+//			}
+//			catch(Exception ex)
+//			{
+//				logger.info(" --- no activity type found with the given xri --- ");
+//				
+//				throw new ServiceException(ex);
+//			}
+			
+			MeetingQuery query = (MeetingQuery) pm.newQuery(Meeting.class);
+			
+			query.thereExistsActivityType().equalTo(activityType);
+			query.orderByModifiedAt().descending();
+			
+	        QueryExtensionRecord queryExtension = PersistenceHelper.newQueryExtension(query);
+	        queryExtension.setClause(Database_1_Attributes.HINT_COUNT + "(1=1)");
+			
+			List<Meeting> meetings = activitySegment.getActivity(query);
+			
+			count = meetings.size();
+			
+			logger.info(" scheduled estate meeting count: " + count);
+		}
+		catch(Exception e)
+		{
+			logger.severe("error: " + e.getMessage() + e.getCause());
+		}
+		finally
+		{
+			if(!pm.isClosed())
+				pm.close();
+		}
+		
+		return count;
+	}
+
+	@Override
+	public ResponseDTO updateEstateMeeting(EstateMeetingDTO estateMeeting)
+	{
+		logger.info(" --- about to update estate meeting --- ");
+		
+		ResponseDTO response = new ResponseDTO();
+		
+		try
+		{
+			pm = conMgr.getPersistenceManager(userId);
+			
+			SegmentUtil segmentUtil = new SegmentUtil(providerName, segmentName);
+			
+			org.opencrx.kernel.activity1.jmi1.Segment activitySegment = segmentUtil.getActivitySegment(pm);
+			
+			Activity activity = activitySegment.getActivity(estateMeeting.getKey().getUuid());
+			
+			if(activity == null)
+			{
+				logger.severe(" --- no activity found with the given id --- ");
+				
+				response.setErrorMsg("no scheduled meeting found with the given id");
+				response.setResponse("no scheduled meeting found with the given id");
+				response.setResult(false);
+				
+				return response;
+			}
+			
+			if(!(activity instanceof Meeting))
+			{
+				logger.info(" --- activity is not an instance of meeting --- ");
+				
+				response.setErrorMsg("activity is not an instance of meeting");
+				response.setResponse("activity is not an instance of meeting");
+				response.setResult(false);
+				
+				return response;
+			}
+			
+			EstateMeetingMapper mapper = new EstateMeetingMapper();
+			
+			Meeting meeting = (Meeting)activity;
+			
+			pm.currentTransaction().begin();
+			
+			meeting = mapper.editMeeting(estateMeeting, meeting, pm);
+			
+			pm.currentTransaction().commit();
+			
+			response.setResult(true);
+			response.setResponse(meeting.getIdentity());
+			
+			logger.info(" --- estate meeting edited successfully! --- ");
+				
+		}
+		catch(Exception e)
+		{
+			logger.severe(" --- error: " + e.getMessage() + e);
+			e.printStackTrace();
+			response.setErrorMsg(e.getMessage());
+			response.setResponse(e);
+			response.setResult(false);
+		}
+		finally
+		{
+			if(!pm.isClosed())
+				pm.close();
+		}
+		
+		return response;
+	}
+
+	@Override
+	public ResponseDTO getScheduledEstateMeeting(String estateMeetingId)
+	{
+		logger.info(" --- about to get estate meeting by id --- ");
+		
+		ResponseDTO response = new ResponseDTO();
+		
+		try
+		{
+			EstateMeetingDTO estateMeeting = new EstateMeetingDTO();
+			
+			if(estateMeetingId == null)
+			{
+				logger.severe(" --- no estateMeeting Id supplied --- ");
+				
+				response.setErrorMsg("no estateMeeting Id supplied");
+				response.setResponse("no estateMeeting Id supplied");
+				response.setResult(false);
+				
+				return response;
+			}
+			
+			pm = conMgr.getPersistenceManager(userId);
+			
+//			SegmentUtil segmentUtil = new SegmentUtil("CRX", segmentName);
+//			
+//			org.opencrx.kernel.activity1.jmi1.Segment activitySegment = segmentUtil.getActivitySegment(pm);
+//			
+//			Task task = (Task) activitySegment.getActivity(CRMUtil.getQualifier(residentOrderXri));
+//			
+//			if(task == null)
+//			{
+//				logger.info(" --- no task found with given id --- ");
+//				
+//				return residentOrder;
+//			}
+			
+			SegmentUtil segmentUtil = new SegmentUtil(providerName, segmentName);
+			
+			org.opencrx.kernel.activity1.jmi1.Segment activitySegment = segmentUtil.getActivitySegment(pm);
+			
+			Activity activity = activitySegment.getActivity(estateMeetingId);
+			
+			if(activity == null)
+			{
+				logger.severe(" --- no activity found with the given id --- ");
+				
+				response.setErrorMsg("no scheduled meeting found with the given id");
+				response.setResponse("no scheduled meeting found with the given id");
+				response.setResult(false);
+				
+				return response;
+			}
+						
+			Meeting meeting = null;
+			
+			if(activity instanceof Meeting)
+			{
+				logger.info(" --- activity is an instance of estate meeting --- ");
+				
+				meeting = (Meeting)activity;
+			}
+			else
+			{
+				logger.severe(" --- activity is not an instance of estate meeting --- ");
+				
+				response.setErrorMsg("activity is not an instance of estate meeting");
+				response.setResponse("activity is not an instance of estate meeting");
+				response.setResult(false);
+			}
+			
+			EstateMeetingMapper mapper = new EstateMeetingMapper();
+			
+			estateMeeting = mapper.geScheduledEstateMeeting(meeting);
+			
+			response.setResponse(estateMeeting);
+			response.setResult(true);
+			
+			logger.info(" --- estate fetched --- ");
+		}
+		catch(Exception e)
+		{
+			logger.severe("error: " + e.getMessage());
+			
+			response.setErrorMsg(e.getMessage());
+			response.setResponse(e.getMessage());
+			response.setResult(false);
+		}
+		finally
+		{
+			if(!pm.isClosed())
+				pm.close();
+		}
+		
+		return response;
+	}
+
+	@Override
+	public ResponseDTO doScheduleEstateMeetingFollowUp(FollowUpDTO followUp)
+	{
+		logger.info(" --- about to do follow up --- ");
+		
+		ResponseDTO response = new ResponseDTO();
+		
+		com.spacio.crm.extension1.jmi1.ScheduleEstateMeetingFollowUpResult out = null;
+		
+		try
+		{
+			pm = conMgr.getPersistenceManager(userId);
+			
+			SegmentUtil segmentUtil = new SegmentUtil("CRX", segmentName);
+			
+			com.spacio.crm.extension1.jmi1.Segment extensionSegment = segmentUtil.getExtensionSegment(pm);
+			
+			com.spacio.crm.extension1.jmi1.ScheduleEstateMeetingFollowUpParams in = Structures.create(
+					com.spacio.crm.extension1.jmi1.ScheduleEstateMeetingFollowUpParams.class,
+	        		Datatypes.member(com.spacio.crm.extension1.jmi1.ScheduleEstateMeetingFollowUpParams.Member.activityUri, followUp.getActivityXri()),
+	        		Datatypes.member(com.spacio.crm.extension1.jmi1.ScheduleEstateMeetingFollowUpParams.Member.category, followUp.getCategory()),
+	        		Datatypes.member(com.spacio.crm.extension1.jmi1.ScheduleEstateMeetingFollowUpParams.Member.description, followUp.getDescription()),
+	        		Datatypes.member(com.spacio.crm.extension1.jmi1.ScheduleEstateMeetingFollowUpParams.Member.followUpContactXri, followUp.getFollowUpContactXri()),
+	        		Datatypes.member(com.spacio.crm.extension1.jmi1.ScheduleEstateMeetingFollowUpParams.Member.name, followUp.getName()),
+//	        		Datatypes.member(com.spacio.crm.extension1.jmi1.CreateEstateActivityParams.Member.scheduledEnd, new Date()),
+	        		Datatypes.member(com.spacio.crm.extension1.jmi1.ScheduleEstateMeetingFollowUpParams.Member.transitionName, followUp.getTransitionName())
+					);
+			
+			pm.currentTransaction().begin();
+			
+			out = extensionSegment.scheduleEstateMeetingFollowUp(in);
+			
+			pm.currentTransaction().commit();
+		
+            if (out == null)
+                logger.fine(" null response. ");
+              else
+                logger.fine(" response is not null. content: " + out.toString());
+              
+              
+             // logger.fine(" result: " + out.isResult() + " errorcode: " + out.getErrorCode() + " reason: " + out.getErrorMsg());
+            
+             ReturnStatusT outcome = out.getStatus();
+             
+               if (outcome.getReturnCode() == BasicException.Code.NONE) 
+               {
+                  logger.info(" ticket follow up successful ! ");
+                   response.setResult(true);
+                   response.setResponse(out.getFollowUp());
+                              
+                   logger.fine(" commit ! ");
+               }
+               else
+               {                 
+                   logger.severe(" error with ticket follow up. code: " + outcome.getReturnParams());            
+                    
+                    response.setErrors(outcome.getReturnParams());
+                    response.setResult(false);
+                 
+                   logger.fine(" rollback ! ");             
+               }
+		
+		}
+		catch(Exception e)
+		{
+			logger.info(" --- error: " + e.getMessage() + e);
+			
+			e.printStackTrace();
+			
+			response.setErrorMsg(e.getMessage());
+			response.setResponse(e);
+			response.setResult(false);
+		}
+		finally
+		{
+			if(!pm.isClosed())
+				pm.close();
+		}
+		
+		return response;
+	}
+
+}

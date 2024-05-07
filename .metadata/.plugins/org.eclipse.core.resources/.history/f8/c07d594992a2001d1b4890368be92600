@@ -1,0 +1,452 @@
+package com.spacio.fm.core.home.dao.impl;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.logging.Logger;
+
+import javax.jdo.PersistenceManager;
+
+import org.opencrx.kernel.home1.jmi1.Alert;
+import org.opencrx.kernel.home1.cci2.AlertQuery;
+import org.opencrx.kernel.home1.cci2.UserHomeQuery;
+import org.opencrx.kernel.home1.jmi1.Segment;
+import org.opencrx.kernel.home1.jmi1.UserHome;
+import org.openmdx.base.naming.Path;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+import org.w3c.spi2.Datatypes;
+import org.w3c.spi2.Structures;
+
+import com.spacio.crm.extension1.dto.SegmentConfigDTO;
+import com.spacio.crm.extension1.jmi1.SendNotificationResult;
+import com.spacio.crm.extension1.util.CRMUtil;
+import com.spacio.crx.bo.ConnectionManager;
+import com.spacio.crx.dao.impl.GenericDAOImpl;
+import com.spacio.crx.dto.PrimaryKey;
+import com.spacio.crx.dto.ResponseDTO;
+import com.spacio.fm.core.home.dao.NotificationDAO;
+import com.spacio.fm.core.home.dto.GetAllNotificationDTO;
+import com.spacio.fm.core.home.dto.NotificationDTO;
+import com.spacio.fm.core.home.mapper.NotificationMapper;
+import com.spacio.fm.core.util.SegmentUtil;
+
+@Component
+public class NotificationDAOImpl extends GenericDAOImpl implements NotificationDAO
+{
+	private static final Logger logger = Logger.getLogger(NotificationDAOImpl.class.getName());
+	
+	@Autowired
+	private ConnectionManager conMgr;
+
+	private PersistenceManager pm;
+	
+	public NotificationDAOImpl()
+	{
+		logger.info(" --- NotificationDAOImpl() --- ");
+	}
+	
+	@Override
+	public ResponseDTO sendNotification(NotificationDTO notification)
+	{
+		logger.info(" --- about to send notification --- ");
+		
+		ResponseDTO response = new ResponseDTO();
+		
+		try
+		{
+			pm = conMgr.getPersistenceManager(userId);
+			
+			SegmentUtil segmentUtil = new SegmentUtil("CRX", segmentName);
+			
+			com.spacio.crm.extension1.jmi1.Segment extensionSegment = segmentUtil.getExtensionSegment(pm);
+			
+			com.spacio.crm.extension1.jmi1.SendNotificationParam in = Structures.create(
+					com.spacio.crm.extension1.jmi1.SendNotificationParam.class,
+	        		Datatypes.member(com.spacio.crm.extension1.jmi1.SendNotificationParam.Member.message, notification.getMessage()),
+	        		Datatypes.member(com.spacio.crm.extension1.jmi1.SendNotificationParam.Member.recipientId, notification.getRecipientId())
+					);
+			
+			SegmentConfigDTO.currentUser = userId;
+			
+			SendNotificationResult out = extensionSegment.sendNotification(in);
+			
+			if(out == null)
+			{
+				logger.info(" --- output is null --- ");
+				
+				response.setErrorMsg("output is null");
+				response.setResult(false);
+				
+				return response;
+			}
+			
+			if(out.isResult())
+			{
+				logger.info(" --- notification sent successfully --- ");
+				
+				response.setResult(true);
+				response.setResponse("notification sent");
+				
+				return response;
+			}
+			else
+			{
+				logger.severe(" --- error: " + out.getErrorMsg());
+				
+				response.setErrorMsg(out.getErrorMsg());
+				response.setResult(false);
+				
+				return response;
+			}
+		}
+		catch(Exception e)
+		{
+			logger.severe(" --- error: " + e.getMessage());
+			
+			response.setErrorMsg(e.getMessage());
+			response.setResponse(e.getMessage());
+			response.setResult(false);
+			
+			return response;
+		}
+		finally
+		{
+			if(!pm.isClosed())
+			{
+				pm.close();
+			}
+		}
+	}
+	
+	@Override
+	public ResponseDTO sendNotificationToAllUsers(String message)
+	{
+		logger.info(" --- about to send notifications to all user --- ");
+		
+		ResponseDTO response = new ResponseDTO();
+		
+		try
+		{	
+			pm = conMgr.getPersistenceManager(userId);
+			
+			SegmentUtil segmentUtil = new SegmentUtil(providerName, segmentName);
+			
+			Segment userHomeSegment = segmentUtil.getUserHomeSegment(pm);
+			
+			UserHomeQuery query = (UserHomeQuery) pm.newQuery(UserHome.class);
+			
+			query.orderByModifiedAt().descending();
+			
+			List<UserHome> userHomes = userHomeSegment.getUserHome(query);
+			
+			if(userHomes.isEmpty())
+			{
+				logger.info(" --- no user found --- ");
+				
+				response.setErrorMsg("no user found");
+				response.setResponse("no user found");
+				response.setResult(false);
+				
+				return response;
+			}
+			
+			for(UserHome userHome : userHomes)
+			{
+				NotificationDTO notification = new NotificationDTO();
+				
+				notification.setMessage(message);
+				notification.setRecipientId(CRMUtil.getQualifier(userHome.getIdentity()));
+				
+				response = sendNotification(notification);
+				
+				if(!response.getResult())
+				{
+					return response;
+				}
+			}
+			
+			return response;
+		}
+		catch(Exception e)
+		{
+			logger.info("error: " + e.getMessage());
+			
+			response.setErrorMsg(e.getMessage());
+			response.setResponse(e.getMessage());
+			response.setResult(false);
+			
+			return response;
+		}
+		finally
+		{
+			if(!pm.isClosed())
+				pm.close();
+		}
+	}
+	
+	@Override
+	public ResponseDTO sendNotificationToAllResidents(String message)
+	{
+		logger.info(" --- about to send notifications to all residents --- ");
+		
+		ResponseDTO response = new ResponseDTO();
+		
+		try
+		{	
+			pm = conMgr.getPersistenceManager(userId);
+			
+			SegmentUtil segmentUtil = new SegmentUtil(providerName, segmentName);
+			
+			Segment userHomeSegment = segmentUtil.getUserHomeSegment(pm);
+			
+			UserHomeQuery query = (UserHomeQuery) pm.newQuery(UserHome.class);
+			
+			query.orderByModifiedAt().descending();
+			query.thereExistsContact().thereExistsAccountCategory().equalTo(24);
+			
+			List<UserHome> userHomes = userHomeSegment.getUserHome(query);
+			
+			if(userHomes.isEmpty())
+			{
+				logger.info(" --- no user found --- ");
+				
+				response.setErrorMsg("no user found");
+				response.setResponse("no user found");
+				response.setResult(false);
+				
+				return response;
+			}
+			
+			for(UserHome userHome : userHomes)
+			{
+				NotificationDTO notification = new NotificationDTO();
+				
+				notification.setMessage(message);
+				notification.setRecipientId(CRMUtil.getQualifier(userHome.getIdentity()));
+				
+				response = sendNotification(notification);
+				
+				if(!response.getResult())
+				{
+					return response;
+				}
+			}
+			
+			return response;
+		}
+		catch(Exception e)
+		{
+			logger.info("error: " + e.getMessage());
+			
+			response.setErrorMsg(e.getMessage());
+			response.setResponse(e.getMessage());
+			response.setResult(false);
+			
+			return response;
+		}
+		finally
+		{
+			if(!pm.isClosed())
+				pm.close();
+		}
+	}
+	
+	@Override
+	public ResponseDTO sendNotificationToAllNonResidents(String message)
+	{
+		logger.info(" --- about to send notifications to non-residents --- ");
+		
+		ResponseDTO response = new ResponseDTO();
+		
+		try
+		{	
+			pm = conMgr.getPersistenceManager(userId);
+			
+			SegmentUtil segmentUtil = new SegmentUtil(providerName, segmentName);
+			
+			Segment userHomeSegment = segmentUtil.getUserHomeSegment(pm);
+			
+			UserHomeQuery query = (UserHomeQuery) pm.newQuery(UserHome.class);
+			
+			query.orderByModifiedAt().descending();
+			query.thereExistsContact().thereExistsAccountCategory().notEqualTo(24);
+			
+			List<UserHome> userHomes = userHomeSegment.getUserHome(query);
+			
+			if(userHomes.isEmpty())
+			{
+				logger.info(" --- no user found --- ");
+				
+				response.setErrorMsg("no user found");
+				response.setResponse("no user found");
+				response.setResult(false);
+				
+				return response;
+			}
+			
+			for(UserHome userHome : userHomes)
+			{
+				NotificationDTO notification = new NotificationDTO();
+				
+				notification.setMessage(message);
+				notification.setRecipientId(CRMUtil.getQualifier(userHome.getIdentity()));
+				
+				response = sendNotification(notification);
+				
+				if(!response.getResult())
+				{
+					return response;
+				}
+			}
+			
+			return response;
+		}
+		catch(Exception e)
+		{
+			logger.info("error: " + e.getMessage());
+			
+			response.setErrorMsg(e.getMessage());
+			response.setResponse(e.getMessage());
+			response.setResult(false);
+			
+			return response;
+		}
+		finally
+		{
+			if(!pm.isClosed())
+				pm.close();
+		}
+	}
+	
+	@Override
+	public ResponseDTO getAllNotifications()
+	{
+		logger.info(" about to get all notifications for a user");
+				
+		ResponseDTO response = new ResponseDTO();
+		
+		try
+		{
+			List<GetAllNotificationDTO> notifications = new ArrayList<>();
+			
+			pm = conMgr.getPersistenceManager(userId);
+			
+			SegmentUtil segmentUtil = new SegmentUtil("CRX", segmentName);
+			
+			Segment userHomeSegment = segmentUtil.getUserHomeSegment(pm);
+			
+			UserHome userHome = userHomeSegment.getUserHome(userId);
+			
+			if(userHome == null)
+			{
+				logger.severe(" --- no user found with given id --- ");
+				
+				response.setErrorMsg("no user found with given id");
+				response.setResponse("no user found with given id");
+				response.setResult(false);
+				
+				return response;
+			}
+			
+			AlertQuery query = (AlertQuery) pm.newQuery(Alert.class);
+			
+			query.orderByModifiedAt().descending();
+			
+			List<Alert> alerts = userHome.getAlert(query);
+			
+			NotificationMapper mapper = new NotificationMapper();
+			
+			for(Alert alert : alerts)
+			{
+				GetAllNotificationDTO notification = new GetAllNotificationDTO();
+				
+				notification = mapper.getNotification(alert);
+				
+				notifications.add(notification);
+			}
+			
+			response.setResponse(notifications);
+			response.setResult(true);
+			
+			logger.info(" --- all notifications fetched --- ");
+			
+			return response;
+		}
+		catch(Exception e)
+		{
+			logger.info(" error: " + e.getMessage());
+			
+			response.setErrorMsg(e.getMessage());
+			response.setResponse(e.getMessage());
+			response.setResult(false);
+			
+			return response;
+		}
+	}
+	
+	@Override
+	public ResponseDTO updateNotificationState(String notificationXri, Short notificationState)
+	{
+		logger.info(" --- about to update the state of an alert --- ");
+		
+		ResponseDTO response = new ResponseDTO();
+		
+		try
+		{
+			pm = conMgr.getPersistenceManager(userId);
+			
+			SegmentUtil segmentUtil = new SegmentUtil(providerName, segmentName);
+			
+			Segment userHomeSegment = segmentUtil.getUserHomeSegment(pm);
+			
+			Alert alert = null;
+						
+			try
+			{
+				alert = (Alert) pm.getObjectById(new Path(notificationXri));
+			}
+			catch(Exception e)
+			{
+				logger.severe("error : " + e.getMessage());
+				
+				response.setErrorMsg("no notification found with given id");
+				response.setResponse("no notification found with given id");
+				response.setResult(false);
+				
+				return response;
+			}
+			
+			UserHome userHome = userHomeSegment.getUserHome(userId);
+			
+			pm.currentTransaction().begin();
+			
+			alert.setAlertState(notificationState);
+			
+			//userHome.addAlert(alert);
+			
+			pm.currentTransaction().commit();
+			
+			response.setResponse(alert.getIdentity());
+			response.setResult(true);
+			
+			return response;
+		}
+		catch(Exception e)
+		{
+			logger.severe("error : " + e.getMessage());
+			e.printStackTrace();
+			response.setErrorMsg(e.getMessage());
+			response.setResponse(e.getMessage());
+			response.setResult(false);
+			
+			return response;
+		}
+		finally
+		{
+			if(!pm.isClosed())
+			{
+				pm.close();
+			}
+		}
+	}
+}

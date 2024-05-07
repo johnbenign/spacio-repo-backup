@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<typeInfoHistroy>
+    <typeInfo handle="=CrxCustom/src\/main\/java=/optional=/true=/=/maven.pomderived=/true=/&lt;com.spacio.crx.dao.impl{GenericDAOImpl.java[GenericDAOImpl" modifiers="1" timestamp="1630009260941"/>
+    <typeInfo handle="=SpacioFMCore/src\/main\/java=/optional=/true=/=/maven.pomderived=/true=/&lt;com.spacio.fm.core.activity.dao{EstateMeetingDAO.java[EstateMeetingDAO" modifiers="513" timestamp="1660600163144"/>
+    <typeInfo handle="=SpacioFMCore/src\/main\/java=/optional=/true=/=/maven.pomderived=/true=/&lt;com.spacio.fm.core.activity.bo{EstateMeetingBO.java[EstateMeetingBO" modifiers="513" timestamp="1663504045212"/>
+    <typeInfo handle="=SpacioFMCore/src\/main\/java=/optional=/true=/=/maven.pomderived=/true=/&lt;com.spacio.fm.core.account.dao{EstateDAO.java[EstateDAO" modifiers="513" timestamp="1650670425861"/>
+    <typeInfo handle="=CrxCustom/src\/main\/java=/optional=/true=/=/maven.pomderived=/true=/&lt;com.spacio.crx.dao{GenericDAO.java[GenericDAO" modifiers="513" timestamp="1611406343232"/>
+    <typeInfo handle="=CrxCustom/src\/main\/java=/optional=/true=/=/maven.pomderived=/true=/&lt;com.spacio.crx.bo{GenericBO.java[GenericBO" modifiers="513" timestamp="1612901661951"/>
+    <typeInfo handle="=CrxCustom/src\/main\/java=/optional=/true=/=/maven.pomderived=/true=/&lt;com.spacio.crx.bo.impl{GenericBOImpl.java[GenericBOImpl" modifiers="1" timestamp="1637713676374"/>
+    <typeInfo handle="=SpacioFMCore/src\/main\/java=/optional=/true=/=/maven.pomderived=/true=/&lt;com.spacio.fm.core.activity.bo{WorkOrderBO.java[WorkOrderBO" modifiers="513" timestamp="1663504544987"/>
+</typeInfoHistroy>

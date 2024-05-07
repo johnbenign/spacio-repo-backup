@@ -1,0 +1,5 @@
+package com.spacio.fm.core.home.dto;
+
+public class ResetPasswordDto {
+
+}

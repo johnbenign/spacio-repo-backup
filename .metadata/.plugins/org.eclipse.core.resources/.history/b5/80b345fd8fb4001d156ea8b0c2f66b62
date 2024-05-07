@@ -1,0 +1,209 @@
+package com.spacio.fm.core.activity.bo.impl;
+
+import java.util.logging.Logger;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+
+import com.spacio.crx.bo.impl.GenericBOImpl;
+import com.spacio.crx.dto.ResponseDTO;
+import com.spacio.fm.core.activity.bo.VisitBO;
+import com.spacio.fm.core.activity.dao.VisitDAO;
+import com.spacio.fm.core.activity.dao.VisitorMetricsDAO;
+import com.spacio.fm.core.activity.dto.CreateVisitDTO;
+import com.spacio.fm.core.activity.dto.FollowUpDTO;
+import com.spacio.fm.core.activity.dto.VisitDTO;
+
+@Component
+public class VisitBOImpl extends GenericBOImpl implements VisitBO
+{
+
+	private static final Logger logger = Logger.getLogger(VisitBOImpl.class.getName());
+		
+	@Autowired
+	private VisitDAO visitDAO;
+	
+	@Autowired
+	private VisitorMetricsDAO metricsDAO;
+
+	
+	@Override
+	public ResponseDTO scheduleVisit(CreateVisitDTO order)
+	{
+		logger.info(" --- about to schedule a visit --- ");
+		
+		visitDAO.setCredentials(providerName, segmentName, userId);
+		
+		ResponseDTO response = visitDAO.scheduleVisit(order);
+		
+		return response;
+	}
+	
+	@Override
+	public ResponseDTO getAllScheduledVisits()
+	{
+		logger.info(" --- getting all scheduled visit --- ");
+									
+		visitDAO.setCredentials(providerName, segmentName, userId);
+				
+		ResponseDTO response = visitDAO.getAllScheduledVisits();
+		
+		return response;
+	}
+	
+	@Override
+	public ResponseDTO getAllScheduledVisitsByResident()
+	{
+		logger.info(" --- getting all scheduled visit --- ");
+									
+		visitDAO.setCredentials(providerName, segmentName, userId);
+				
+		ResponseDTO response = visitDAO.getAllScheduledVisitsByResident();
+		
+		return response;
+	}
+	
+	@Override
+	public ResponseDTO getAllScheduledVisits(int index, int range)
+	{
+		logger.info(" --- getting all visits range--- ");
+		
+		visitDAO.setCredentials(providerName, segmentName, userId);
+				
+		ResponseDTO response = visitDAO.getAllScheduledVisits(index, range);
+		
+		return response;
+	}
+	
+	@Override
+	public ResponseDTO getAllScheduledVisitsByResident(int index, int range)
+	{
+		logger.info(" --- getting all visits range--- ");
+		
+		visitDAO.setCredentials(providerName, segmentName, userId);
+				
+		ResponseDTO response = visitDAO.getAllScheduledVisitsByResident(index, range);
+		
+		return response;
+	}
+	
+	@Override
+	public int getAllScheduledVisitsSize()
+	{
+		logger.info(" --- getting all visits range--- ");
+				
+		visitDAO.setCredentials(providerName, segmentName, userId);
+				
+		int count = visitDAO.getAllScheduledVisitsSize();
+		
+		return count;
+	}
+	
+	@Override
+	public int getAllScheduledVisitsByResidentSize()
+	{
+		logger.info(" --- getting all visits range--- ");
+				
+		visitDAO.setCredentials(providerName, segmentName, userId);
+				
+		int count = visitDAO.getAllScheduledVisitsSizeByResident();
+		
+		return count;
+	}
+
+	@Override
+	public ResponseDTO updateVisit(VisitDTO visit)
+	{
+		logger.info(" --- about to update visit --- ");
+		
+		visitDAO.setCredentials(providerName, segmentName, userId);
+		
+		ResponseDTO response = visitDAO.updateVisit(visit);
+		
+		return response;
+	}
+
+	@Override
+	public ResponseDTO getScheduledVisit(String visitId)
+	{
+		logger.info(" --- getting scheduled visit by id --- ");
+		
+		visitDAO.setCredentials(providerName, segmentName, userId);
+		
+		ResponseDTO response = visitDAO.getScheduledVisit(visitId);
+		
+		return response;
+	}
+	
+	@Override
+	public ResponseDTO doScheduleVisitFollowUp(FollowUpDTO followUp)
+	{
+		logger.info(" --- do visit follow up --- ");
+		
+		visitDAO.setCredentials(providerName, segmentName, userId);
+		
+		ResponseDTO response = visitDAO.doScheduleVisitFollowUp(followUp);
+		
+		return response;
+	}
+	
+	@Override
+	public ResponseDTO getAllPendingVisits()
+	{
+		metricsDAO.setCredentials(providerName, segmentName, userId);
+		
+		ResponseDTO response = metricsDAO.getAllPendingVisits();
+		
+		return response;
+	}
+	
+	@Override
+	public ResponseDTO getAllPendingVisitsByResident()
+	{
+		metricsDAO.setCredentials(providerName, segmentName, userId);
+		
+		ResponseDTO response = metricsDAO.getAllPendingVisitsByResident();
+		
+		return response;
+	}
+	
+	@Override
+	public ResponseDTO getAllApprovedVisits()
+	{
+		metricsDAO.setCredentials(providerName, segmentName, userId);
+		
+		ResponseDTO response = metricsDAO.getAllApprovedVisits();
+		
+		return response;
+	}
+	
+	@Override
+	public ResponseDTO getAllApprovedVisitsByResident()
+	{
+		metricsDAO.setCredentials(providerName, segmentName, userId);
+		
+		ResponseDTO response = metricsDAO.getAllApprovedVisitsByResident();
+		
+		return response;
+	}
+	
+	@Override
+	public ResponseDTO getAllDeniedVisits()
+	{
+		metricsDAO.setCredentials(providerName, segmentName, userId);
+		
+		ResponseDTO response = metricsDAO.getAllDeniedVisits();
+		
+		return response;
+	}
+	
+	@Override
+	public ResponseDTO getAllDeniedVisitsByResident()
+	{
+		metricsDAO.setCredentials(providerName, segmentName, userId);
+		
+		ResponseDTO response = metricsDAO.getAllDeniedVisitsByResident();
+		
+		return response;
+	}
+}

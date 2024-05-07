@@ -1,0 +1,199 @@
+package com.spacio.fm.core.home;
+
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+import javax.jdo.PersistenceManagerFactory;
+import javax.naming.spi.NamingManager;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.opencrx.kernel.utils.Utils;
+import org.openmdx.kernel.lightweight.naming.NonManagedInitialContextFactoryBuilder;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Scope;
+
+import com.spacio.fm.core.dto.ResponseDTO;
+import com.spacio.fm.core.home.bo.HomeBO;
+import com.spacio.fm.core.home.dto.CreateUserDTO;
+
+//@SpringBootTest
+class TestHomeBO
+{
+	private static final Logger logger = Logger.getLogger(TestHomeBO.class.getName());
+
+	@Value("${dev.provider}")
+	private String provider;
+
+	@Autowired
+	private HomeBO homeBO;
+
+	//@TestConfiguration
+	static class PMFConfiguration
+	{
+
+		@Value("${db.url}")
+		private String dbUrl;
+
+		// private String userId = "admin-Aiicodev"; //
+
+		@Bean("pmf")
+		@Scope(value = "singleton")
+		public PersistenceManagerFactory producePersistenceManagerFactory() {
+
+			logger.info(" -------- producePersistenceManagerFactory ------- ");
+
+			initContextFactory(dbUrl);
+
+			PersistenceManagerFactory pmf = initPMF();
+
+			return pmf;
+		}
+
+		public PersistenceManagerFactory initPMF() {
+
+			logger.info(" -------- initPMF ------- ");
+
+			PersistenceManagerFactory pmf = null;
+
+			try {
+
+				// initContextFactory(dbUrl);
+
+				pmf = Utils.getPersistenceManagerFactory();
+
+				logger.info(" is pmf null ? ");
+
+				if (pmf != null) {
+					logger.info(" no it is not null.  ");
+
+					logger.info(" pmf initialised locally  !");
+				} else {
+					logger.info(" is pmf null oh !!! ");
+				}
+
+			} catch (Exception e) {
+
+				logger.severe(" error: " + e.getMessage());
+
+				logger.log(Level.SEVERE, " error initialising local pmf ! ", e);
+
+				// new ServiceException(e).log();
+			}
+
+			return pmf;
+		}
+
+		public void initContextFactory(String dbUrl) {
+
+			logger.info(" -----  initContextFactory ------ ");
+
+			logger.info(" db url: " + dbUrl);
+
+			try {
+
+				logger.info(" inside initContextFactory() ---");
+
+				if (!NamingManager.hasInitialContextFactoryBuilder()) {
+
+					logger.info("---init non managed init context .... ---- ");
+
+					// local
+
+					NonManagedInitialContextFactoryBuilder
+							.install(Collections.singletonMap("org.openmdx.comp.env.jdbc_opencrx_CRX", dbUrl));
+
+					logger.info(" context has been initialised !");
+
+					/*
+					 * // remote amzaon NonManagedInitialContextFactoryBuilder.install(
+					 * Collections.singletonMap( "org.openmdx.comp.env.jdbc_opencrx_CRX",
+					 * "jdbc:sqlserver:\\/\\/spaciofm.cvjywuu0shvj.us-west-2.rds.amazonaws.com:1433;databaseName=spacio_fm2;selectMethod=cursor?user=crmuser&password=crmpass433&driver=com.microsoft.sqlserver.jdbc.SQLServerDriver"
+					 * );
+					 */
+
+				} else {
+					logger.info(" context has already been initialised !!! ");
+				}
+
+			} catch (Exception ex) {
+
+				logger.severe(" error message: " + ex.getMessage());
+
+				ex.printStackTrace();
+
+			}
+
+		}
+
+	}
+	
+	@BeforeEach
+	void setUp() throws Exception 
+	{
+		
+		  String segment = "Test25";
+			
+		  String userId = "admin-Test25";
+		  
+		  homeBO.setCredentials(provider, segment, userId);
+	}
+	
+	//@Test
+	void testCreateFMUser2()
+	{
+		logger.info(" -- createFMUser() -- ");
+		
+		CreateUserDTO user = new CreateUserDTO();
+		
+		Short accountCategory = 10;
+		
+		List<Short> accountCategories = new ArrayList<>();
+		
+		accountCategories.add(accountCategory);
+		user.setAccountCategories(accountCategories);
+		
+		user.setPrincipalId("Bolumide3");
+		
+		//account/CRX/Test25/3CE3Y4HGRNKDM6Y58F2TX7LZ9
+		String companyXri = "xri://@openmdx*org.opencrx.kernel.account1/provider/CRX/segment/Test25/account/3CE3Y4HGRNKDM6Y58F2TX7LZ9";
+		user.setCompanyXri(companyXri);
+		//
+		String estateXri = "xri://@openmdx*org.opencrx.kernel.account1/provider/CRX/segment/Test25/account/L72XGJCPKI86KXL93B0J0WPCL";
+		user.setEstateXri(estateXri);
+		
+		String segmentName = "Test25";
+		user.setSegmentName(segmentName);
+		
+		Short role = 21;
+		user.setRole(role);
+		
+		String firstName = "Bolumide";
+		user.setFirstName(firstName);
+		
+		String lastName = "Bolanle";
+		user.setLastName(lastName);
+		
+		String email = "bolanle@bolumide.com";
+		user.setEmailAddress(email);
+		
+		String telephone = "08035030710";
+		user.setTelephone(telephone);
+        
+        ResponseDTO response = homeBO.createUser(user);
+			
+		assertNotNull( response, "response should not be null");
+		
+		assertTrue(response.getResult(), "result should be true");
+	}
+}

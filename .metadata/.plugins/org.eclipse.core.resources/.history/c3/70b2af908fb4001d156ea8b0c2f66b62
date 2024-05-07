@@ -1,0 +1,156 @@
+package com.spacio.fm.core.activity.bo.impl;
+
+import java.util.logging.Logger;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+
+import com.spacio.crx.bo.impl.GenericBOImpl;
+import com.spacio.crx.dto.ResponseDTO;
+import com.spacio.fm.core.activity.bo.EstateMeetingBO;
+import com.spacio.fm.core.activity.dao.EstateMeetingDAO;
+import com.spacio.fm.core.activity.dao.EstateMeetingMetricsDAO;
+import com.spacio.fm.core.activity.dto.CreateEstateMeetingDTO;
+import com.spacio.fm.core.activity.dto.EstateMeetingDTO;
+import com.spacio.fm.core.activity.dto.FollowUpDTO;
+
+@Component
+public class EstateMeetingBOImpl extends GenericBOImpl implements EstateMeetingBO
+{
+	
+	private static final Logger logger = Logger.getLogger(EstateMeetingBOImpl.class.getName());
+	
+	@Autowired
+	private EstateMeetingDAO estateMeetingDAO;
+	
+	@Autowired
+	private EstateMeetingMetricsDAO metricsDAO;
+	
+	@Override
+	public ResponseDTO scheduleEstateMeeting(CreateEstateMeetingDTO estateMeeting)
+	{
+		logger.info(" --- about to schedule estate meeting --- ");
+		
+		estateMeetingDAO.setCredentials(providerName, segmentName, userId);
+				
+		ResponseDTO response = estateMeetingDAO.scheduleEstateMeeting(estateMeeting);
+		
+		return response;
+	}
+
+	@Override
+	public ResponseDTO getAllScheduledEstateMeetings()
+	{
+		logger.info(" --- getting all scheduled estate meeting --- ");
+				
+		//ActivityDAO dao = new ActivityDAO();
+		
+		estateMeetingDAO.setCredentials(providerName, segmentName, userId);
+						
+		ResponseDTO response = estateMeetingDAO.getAllScheduledEstateMeetings();
+		
+		return response;
+	}
+
+	@Override
+	public ResponseDTO getAllScheduledEstateMeetings(int index, int range)
+	{
+		logger.info(" --- getting all estate meeting range--- ");
+		
+		//ActivityDAO dao = new ActivityDAO();
+		
+		estateMeetingDAO.setCredentials(providerName, segmentName, userId);
+						
+		ResponseDTO response = estateMeetingDAO.getAllScheduledEstateMeetings(index, range);
+		
+		return response;
+	}
+
+	@Override
+	public int getAllScheduledEstateMeetingsSize()
+	{
+		logger.info(" --- getting all estate meeting range--- ");
+		
+		estateMeetingDAO.setCredentials(providerName, segmentName, userId);
+						
+		int count = estateMeetingDAO.getAllScheduledEstateMeetingsSize();
+		
+		return count;
+	}
+
+	@Override
+	public ResponseDTO updateEstateMeeting(EstateMeetingDTO estateMeeting)
+	{
+		logger.info(" --- about to update estate meeting --- ");
+		
+		estateMeetingDAO.setCredentials(providerName, segmentName, userId);
+				
+		ResponseDTO response = estateMeetingDAO.updateEstateMeeting(estateMeeting);
+		
+		return response;
+	}
+
+	@Override
+	public ResponseDTO getScheduledEstateMeeting(String estateMeetingId)
+	{
+		logger.info(" --- getting scheduled estate meeting by id --- ");
+		
+		estateMeetingDAO.setCredentials(providerName, segmentName, userId);
+				
+		ResponseDTO response = estateMeetingDAO.getScheduledEstateMeeting(estateMeetingId);
+		
+		return response;
+	}
+
+	@Override
+	public ResponseDTO doScheduleEstateMeetingFollowUp(FollowUpDTO followUp)
+	{
+		logger.info(" --- do estate meeting follow up --- ");
+		
+		estateMeetingDAO.setCredentials(providerName, segmentName, userId);
+		
+		ResponseDTO response = estateMeetingDAO.doScheduleEstateMeetingFollowUp(followUp);
+		
+		return response;
+	}
+	
+	@Override
+	public ResponseDTO getAllPendingMeetings()
+	{		
+		metricsDAO.setCredentials(providerName, segmentName, userId);
+		
+		ResponseDTO response = metricsDAO.getAllPendingMeetings();
+		
+		return response;
+	}
+	
+	@Override
+	public ResponseDTO getAllPendingMeetingsByResident()
+	{		
+		metricsDAO.setCredentials(providerName, segmentName, userId);
+		
+		ResponseDTO response = metricsDAO.getAllPendingMeetingsByResident();
+		
+		return response;
+	}
+	
+	@Override
+	public ResponseDTO getAllCompletedMeetings()
+	{		
+		metricsDAO.setCredentials(providerName, segmentName, userId);
+		
+		ResponseDTO response = metricsDAO.getAllCompletedMeetings();
+		
+		return response;
+	}
+	
+	@Override
+	public ResponseDTO getAllCompletedMeetingsByResident()
+	{		
+		metricsDAO.setCredentials(providerName, segmentName, userId);
+		
+		ResponseDTO response = metricsDAO.getAllCompletedMeetingsByResident();
+		
+		return response;
+	}
+}

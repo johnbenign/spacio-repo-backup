@@ -1,0 +1,1120 @@
+package com.spacio.fm.core.activity.dao.impl;
+
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.logging.Logger;
+
+import org.opencrx.kernel.account1.jmi1.Contact;
+import org.opencrx.kernel.activity1.cci2.ActivityTypeQuery;
+import org.opencrx.kernel.activity1.cci2.MeetingQuery;
+import org.opencrx.kernel.activity1.jmi1.Activity;
+import org.opencrx.kernel.activity1.jmi1.ActivityType;
+import org.opencrx.kernel.activity1.jmi1.Meeting;
+import org.opencrx.kernel.home1.jmi1.UserHome;
+import org.openmdx.base.dataprovider.layer.persistence.jdbc.spi.Database_1_Attributes;
+import org.openmdx.base.persistence.cci.PersistenceHelper;
+import org.openmdx.base.rest.cci.QueryExtensionRecord;
+import org.openmdx.kernel.exception.BasicException;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+import org.w3c.spi2.Datatypes;
+import org.w3c.spi2.Structures;
+
+import com.spacio.crm.extension1.jmi1.ReturnStatusT;
+import com.spacio.crx.bo.ConnectionManager;
+import com.spacio.crx.dao.impl.GenericDAOImpl;
+import com.spacio.crx.dto.ResponseDTO;
+import com.spacio.fm.core.activity.dao.VisitDAO;
+import com.spacio.fm.core.activity.dto.CreateVisitDTO;
+import com.spacio.fm.core.activity.dto.FollowUpDTO;
+import com.spacio.fm.core.activity.dto.VisitDTO;
+import com.spacio.fm.core.activity.dto.VisitListDTO;
+import com.spacio.fm.core.activity.enums.VisitorStatus;
+import com.spacio.fm.core.activity.mapper.VisitMapper;
+import com.spacio.fm.core.util.SegmentUtil;
+import com.spacio.fm.core.util.SpacioFmUtil;
+
+@Component
+public class VisitDAOImpl extends GenericDAOImpl implements VisitDAO
+{
+	private static final Logger logger = Logger.getLogger(VisitDAOImpl.class.getName());
+	
+	public static final String ACT_TYPE_EST_VISIT = "Estate Visit";
+	
+	public static final String ACT_CREATOR_EST_VISIT = "Estate Visit";
+		
+	@Autowired
+	private ConnectionManager conMgr;
+		
+	public ResponseDTO scheduleVisit(CreateVisitDTO visit)
+	{
+		logger.info(" --- about to schdule visit --- ");
+		
+		ResponseDTO response = new ResponseDTO();
+		
+		try
+		{
+			pm = conMgr.getPersistenceManager(userId);
+			
+			SegmentUtil segmentUtil = new SegmentUtil("CRX", segmentName);
+			
+			org.opencrx.kernel.home1.jmi1.Segment userHomeSegment =  segmentUtil.getUserHomeSegment(pm);
+			
+			UserHome userHome = userHomeSegment.getUserHome(userId);
+			
+			if(userHome == null)
+			{
+				logger.info(" --- no user found with the given id --- ");
+				
+				response.setErrorMsg("user not found");
+				response.setResponse("user not found");
+				response.setResult(false);
+				
+				return response;
+			}
+			
+			Contact reportingContact = userHome.getContact();
+			
+			com.spacio.crm.extension1.jmi1.Segment extensionSegment = segmentUtil.getExtensionSegment(pm);
+			
+			com.spacio.crm.extension1.jmi1.ScheduleVisitActivityParams in = Structures.create(
+					com.spacio.crm.extension1.jmi1.ScheduleVisitActivityParams.class,
+	        		Datatypes.member(com.spacio.crm.extension1.jmi1.ScheduleVisitActivityParams.Member.activityCreatorName, ACT_CREATOR_EST_VISIT),
+//	        		Datatypes.member(com.spacio.crm.extension1.jmi1.ScheduleVisitActivityParams.Member.category, visit.getCategories()),
+	        		Datatypes.member(com.spacio.crm.extension1.jmi1.ScheduleVisitActivityParams.Member.name, visit.getName()),
+	        		Datatypes.member(com.spacio.crm.extension1.jmi1.ScheduleVisitActivityParams.Member.problemDescription, visit.getDescription()),
+	        		Datatypes.member(com.spacio.crm.extension1.jmi1.ScheduleVisitActivityParams.Member.reportingContactXri, reportingContact.getIdentity()),
+	        		Datatypes.member(com.spacio.crm.extension1.jmi1.ScheduleVisitActivityParams.Member.accountParty, visit.getContactXris()),
+//	        		Datatypes.member(com.spacio.crm.extension1.jmi1.CreateEstateActivityParams.Member.scheduledEnd, new Date()),
+	        		Datatypes.member(com.spacio.crm.extension1.jmi1.ScheduleVisitActivityParams.Member.scheduledStart, visit.getScheduledStart()),
+	        		Datatypes.member(com.spacio.crm.extension1.jmi1.ScheduleVisitActivityParams.Member.scheduledEnd, visit.getScheduledEnd()),
+	        		Datatypes.member(com.spacio.crm.extension1.jmi1.ScheduleVisitActivityParams.Member.phoneNumber, visit.getPhoneNumber()),
+	        		Datatypes.member(com.spacio.crm.extension1.jmi1.ScheduleVisitActivityParams.Member.dueBy, visit.getDueBy()),
+	        		Datatypes.member(com.spacio.crm.extension1.jmi1.ScheduleVisitActivityParams.Member.operatorPriority, (short)0),
+	        		Datatypes.member(com.spacio.crm.extension1.jmi1.ScheduleVisitActivityParams.Member.assignedToXri, visit.getContactXris().get(0)),
+	        		Datatypes.member(com.spacio.crm.extension1.jmi1.ScheduleVisitActivityParams.Member.operatorId, userId)
+					);
+			
+			com.spacio.crm.extension1.jmi1.ScheduleVisitActivityResult out = extensionSegment.scheduleVisitActivity(in);
+			
+			if(out.isResult())
+			{
+				response.setResult(true);
+				response.setResponse(out.getTicketUri());
+				
+				logger.info(" --- estate visit have been scheduled successfully!!! ---");
+			}
+			else
+			{
+				response.setErrorMsg(out.getErrorMsg());
+				response.setErrors(out.getErrors());
+				response.setResponse(out.getErrorMsg());
+				
+				return response;
+			}
+		}
+		catch(Exception e)
+		{
+			logger.info(" --- error: " + e.getMessage() + e);
+			
+			//e.printStackTrace();
+			
+			response.setErrorMsg(e.getMessage());
+			response.setResponse(e);
+			response.setResult(false);
+		}
+		finally
+		{
+			if(!pm.isClosed())
+				pm.close();
+		}
+		
+		return response;
+	}
+	
+	@Override
+	public ResponseDTO getAllScheduledVisits(VisitorStatus status)
+	{
+		logger.info(" --- get all scheduled visit --- ");
+		
+		ResponseDTO response = new ResponseDTO();
+		
+		try
+		{
+			List<VisitListDTO> scheduledVisits = new ArrayList<>();
+			
+//			if(activityTypeId == null)
+//			{
+//				logger.severe(" --- no activity type id supplied --- ");
+//				
+//				response.setErrorMsg("no activity type id supplied");
+//				response.setResponse("no activity type id supplied");
+//				response.setResult(true);
+//				
+//				return response;
+//			}
+			
+			pm = conMgr.getPersistenceManager(userId);
+			
+			SegmentUtil segmentUtil = new SegmentUtil("CRX", segmentName);
+			
+			org.opencrx.kernel.activity1.jmi1.Segment activitySegment = segmentUtil.getActivitySegment(pm);
+			
+			ActivityTypeQuery activityTypeQuery = (ActivityTypeQuery) pm.newQuery(ActivityType.class);
+			
+			activityTypeQuery.name().equalTo(ACT_TYPE_EST_VISIT);
+			activityTypeQuery.orderByModifiedAt().descending();
+			
+			List<ActivityType> activityTypes = activitySegment.getActivityType(activityTypeQuery);
+			
+			if(activityTypes.isEmpty())
+			{
+				logger.info(" --- no activity type found with the given name, please contact admin --- ");
+				
+				response.setErrorMsg("no activity type found with the given name, please contact administrator");
+				response.setResponse("no activity type found with the given name, please contact administrator");
+				response.setResult(false);
+				
+				return response;
+			}
+			
+			ActivityType activityType = activityTypes.get(0);
+			
+//			if(activityType == null)
+//			{
+//				logger.severe(" --- no activity type found with the given id, please contact admin --- ");
+//				
+//				response.setErrorMsg("no activity type found with the given id, please contact admin");
+//				response.setResponse("no activity type found with the given id, please contact admin");
+//				response.setResult(false);
+//				
+//				return response;
+//			}
+						
+//			try
+//			{
+//				logger.info(" ---  getting the activity type ---- ");
+//				
+//				activityType = (ActivityType) pm.getObjectById(new Path(activityTypeXri));
+//			}
+//			catch(Exception ex)
+//			{ 
+//				logger.info(" --- no activity type found with the given xri --- ");
+//				
+//				throw new ServiceException(ex);
+//			}
+			
+			MeetingQuery query = (MeetingQuery) pm.newQuery(Meeting.class);
+			
+			query.thereExistsActivityType().equalTo(activityType);
+			query.orderByModifiedAt().descending();
+			
+			if(status != null) {
+				query.thereExistsProcessState().name().equalTo(status.getActualValue());
+			}
+			//ResponseDTO res = SpacioFmUtil.isResident(userId, currentEstateXri, pm, segmentName);
+			
+			List<Meeting> meetings = activitySegment.getActivity(query);
+			
+			VisitMapper mapper = new VisitMapper();
+			
+			for(Meeting meeting : meetings)
+			{
+				VisitListDTO scheduledVisit = mapper.geScheduledVisitList(meeting);
+				
+				scheduledVisits.add(scheduledVisit);
+			}
+			
+			response.setResponse(scheduledVisits);
+			response.setResult(true);
+			
+			logger.info(" --- scheduled visits fetch completed --- ");
+		}
+		catch(Exception e)
+		{
+			logger.severe("error: " + e.getMessage() + e.getCause());
+			
+			response.setErrorMsg(e.getMessage());
+			response.setResponse(e.getMessage());
+			response.setResult(false);
+			
+			//e.printStackTrace();
+		}
+		finally
+		{
+			if(!pm.isClosed())
+				pm.close();
+		}
+		
+		return response;
+	}
+
+	@Override
+	public ResponseDTO getAllScheduledVisitsByResident(VisitorStatus status)
+	{
+		logger.info(" --- get all scheduled visit --- ");
+		
+		ResponseDTO response = new ResponseDTO();
+		
+		try
+		{
+			List<VisitListDTO> scheduledVisits = new ArrayList<>();
+			
+//			if(activityTypeId == null)
+//			{
+//				logger.severe(" --- no activity type id supplied --- ");
+//				
+//				response.setErrorMsg("no activity type id supplied");
+//				response.setResponse("no activity type id supplied");
+//				response.setResult(true);
+//				
+//				return response;
+//			}
+			
+			pm = conMgr.getPersistenceManager(userId);
+			
+			SegmentUtil segmentUtil = new SegmentUtil("CRX", segmentName);
+			
+			org.opencrx.kernel.home1.jmi1.Segment userHomeSegment =  segmentUtil.getUserHomeSegment(pm);
+			
+			UserHome userHome = userHomeSegment.getUserHome(userId);
+			
+			if(userHome == null)
+			{
+				logger.info(" --- no user found with the given id --- ");
+				
+				response.setErrorMsg("user not found");
+				response.setResponse("user not found");
+				response.setResult(false);
+				
+				return response;
+			}
+			
+			Contact reportingContact = userHome.getContact();
+			
+			org.opencrx.kernel.activity1.jmi1.Segment activitySegment = segmentUtil.getActivitySegment(pm);
+			
+			ActivityTypeQuery activityTypeQuery = (ActivityTypeQuery) pm.newQuery(ActivityType.class);
+			
+			activityTypeQuery.name().equalTo(ACT_TYPE_EST_VISIT);
+			activityTypeQuery.orderByModifiedAt().descending();
+			
+			List<ActivityType> activityTypes = activitySegment.getActivityType(activityTypeQuery);
+			
+			if(activityTypes.isEmpty())
+			{
+				logger.info(" --- no activity type found with the given name, please contact admin --- ");
+				
+				response.setErrorMsg("no activity type found with the given name, please contact administrator");
+				response.setResponse("no activity type found with the given name, please contact administrator");
+				response.setResult(false);
+				
+				return response;
+			}
+			
+			ActivityType activityType = activityTypes.get(0);
+			
+//			if(activityType == null)
+//			{
+//				logger.severe(" --- no activity type found with the given id, please contact admin --- ");
+//				
+//				response.setErrorMsg("no activity type found with the given id, please contact admin");
+//				response.setResponse("no activity type found with the given id, please contact admin");
+//				response.setResult(false);
+//				
+//				return response;
+//			}
+						
+//			try
+//			{
+//				logger.info(" ---  getting the activity type ---- ");
+//				
+//				activityType = (ActivityType) pm.getObjectById(new Path(activityTypeXri));
+//			}
+//			catch(Exception ex)
+//			{ 
+//				logger.info(" --- no activity type found with the given xri --- ");
+//				
+//				throw new ServiceException(ex);
+//			}
+			
+			MeetingQuery query = (MeetingQuery) pm.newQuery(Meeting.class);
+			
+			query.thereExistsActivityType().equalTo(activityType);
+			query.orderByModifiedAt().descending();
+			if(status != null) {
+				query.thereExistsProcessState().name().equalTo(status.getActualValue());
+			}
+			//ResponseDTO res = SpacioFmUtil.isResident(userId, currentEstateXri, pm, segmentName);
+			
+			query.thereExistsReportingContact().equalTo(reportingContact);
+			
+			List<Meeting> meetings = activitySegment.getActivity(query);
+			
+			VisitMapper mapper = new VisitMapper();
+			
+			for(Meeting meeting : meetings)
+			{
+				VisitListDTO scheduledVisit = mapper.geScheduledVisitList(meeting);
+				
+				scheduledVisits.add(scheduledVisit);
+			}
+			
+			response.setResponse(scheduledVisits);
+			response.setResult(true);
+			
+			logger.info(" --- scheduled visits fetch completed --- ");
+		}
+		catch(Exception e)
+		{
+			logger.severe("error: " + e.getMessage() + e.getCause());
+			
+			response.setErrorMsg(e.getMessage());
+			response.setResponse(e.getMessage());
+			response.setResult(false);
+			
+			//e.printStackTrace();
+		}
+		finally
+		{
+			if(!pm.isClosed())
+				pm.close();
+		}
+		
+		return response;
+	}
+	
+	@Override
+	public ResponseDTO getAllScheduledVisits(int index, int range, VisitorStatus status)
+	{
+		logger.info(" --- get all scheduled visits range --- ");
+		
+		ResponseDTO response = new ResponseDTO();
+		
+		try
+		{
+			List<VisitListDTO> scheduledVisits = new ArrayList<>();
+			
+//			if(activityTypeId == null)
+//			{
+//				logger.severe(" --- no activity type id supplied --- ");
+//				
+//				response.setErrorMsg("no activity type id supplied");
+//				response.setResponse("no activity type id supplied");
+//				response.setResult(false);
+//				
+//				return response;
+//			}
+			
+			pm = conMgr.getPersistenceManager(userId);
+			
+			SegmentUtil segmentUtil = new SegmentUtil("CRX", segmentName);
+			
+			org.opencrx.kernel.activity1.jmi1.Segment activitySegment = segmentUtil.getActivitySegment(pm);
+			
+			ActivityTypeQuery activityTypeQuery = (ActivityTypeQuery) pm.newQuery(ActivityType.class);
+			
+			activityTypeQuery.name().equalTo(ACT_TYPE_EST_VISIT);
+			activityTypeQuery.orderByModifiedAt().descending();
+			
+			List<ActivityType> activityTypes = activitySegment.getActivityType(activityTypeQuery);
+			
+			if(activityTypes.isEmpty())
+			{
+				logger.info(" --- no activity type found with the given name, please contact admin --- ");
+				
+				response.setErrorMsg("no activity type found with the given name, please contact administrator");
+				response.setResponse("no activity type found with the given name, please contact administrator");
+				response.setResult(false);
+				
+				return response;
+			}
+			
+			ActivityType activityType = activityTypes.get(0);
+			
+//			if(activityType == null)
+//			{
+//				logger.severe(" --- no activity type found with the given id --- ");
+//				
+//				response.setErrorMsg("no activity type found with the given id");
+//				response.setResponse("no activity type found with the given id");
+//				response.setResult(false);
+//				
+//				return response;
+//			}
+						
+//			try
+//			{
+//				logger.info(" ---  getting the activity type ---- ");
+//				
+//				activityType = (ActivityType) pm.getObjectById(new Path(activityTypeXri));
+//			}
+//			catch(Exception ex)
+//			{
+//				logger.info(" --- no activity type found with the given xri --- ");
+//				
+//				throw new ServiceException(ex);
+//			}
+			
+			MeetingQuery query = (MeetingQuery) pm.newQuery(Meeting.class);
+			
+			query.thereExistsActivityType().equalTo(activityType);
+			query.orderByModifiedAt().descending();
+			if(status != null) {
+				query.thereExistsProcessState().name().equalTo(status.getActualValue());
+			}
+			//ResponseDTO res = SpacioFmUtil.isResident(userId, currentEstateXri, pm, segmentName);
+			
+			List<Meeting> meetings = activitySegment.getActivity(query);
+			
+			VisitMapper mapper = new VisitMapper();
+			
+			int count = 0;
+			
+			for(Iterator<Meeting> i = meetings.listIterator(index); i.hasNext();)
+			{
+				Meeting meeting = i.next();
+				
+				VisitListDTO visit = mapper.geScheduledVisitList(meeting);
+				
+				scheduledVisits.add(visit);
+				
+				count++;
+				
+				logger.info("range count: " + count);
+				
+	            if(count > range)
+	            {
+	                break;
+	            }
+			}
+			
+			response.setResponse(scheduledVisits);
+			response.setResult(true);
+			
+			logger.info("get scheduled visits range is successful");
+		}
+		catch(Exception e)
+		{
+			logger.severe("error: " + e.getMessage() + e.getCause());
+			
+			response.setErrorMsg(e.getMessage());
+			response.setResponse(e.getMessage());
+			response.setResult(false);
+			
+		}
+		finally
+		{
+			if(!pm.isClosed())
+				pm.close();
+		}
+		
+		return response;
+	}
+	
+	@Override
+	public ResponseDTO getAllScheduledVisitsByResident(int index, int range, VisitorStatus status)
+	{
+		logger.info(" --- get all scheduled visits range --- ");
+		
+		ResponseDTO response = new ResponseDTO();
+		
+		try
+		{
+			List<VisitListDTO> scheduledVisits = new ArrayList<>();
+			
+//			if(activityTypeId == null)
+//			{
+//				logger.severe(" --- no activity type id supplied --- ");
+//				
+//				response.setErrorMsg("no activity type id supplied");
+//				response.setResponse("no activity type id supplied");
+//				response.setResult(false);
+//				
+//				return response;
+//			}
+			
+			pm = conMgr.getPersistenceManager(userId);
+			
+			SegmentUtil segmentUtil = new SegmentUtil("CRX", segmentName);
+			
+			org.opencrx.kernel.home1.jmi1.Segment userHomeSegment =  segmentUtil.getUserHomeSegment(pm);
+			
+			UserHome userHome = userHomeSegment.getUserHome(userId);
+			
+			if(userHome == null)
+			{
+				logger.info(" --- no user found with the given id --- ");
+				
+				response.setErrorMsg("user not found");
+				response.setResponse("user not found");
+				response.setResult(false);
+				
+				return response;
+			}
+			
+			Contact reportingContact = userHome.getContact();
+			
+			org.opencrx.kernel.activity1.jmi1.Segment activitySegment = segmentUtil.getActivitySegment(pm);
+			
+			ActivityTypeQuery activityTypeQuery = (ActivityTypeQuery) pm.newQuery(ActivityType.class);
+			
+			activityTypeQuery.name().equalTo(ACT_TYPE_EST_VISIT);
+			activityTypeQuery.orderByModifiedAt().descending();
+			
+			List<ActivityType> activityTypes = activitySegment.getActivityType(activityTypeQuery);
+			
+			if(activityTypes.isEmpty())
+			{
+				logger.info(" --- no activity type found with the given name, please contact admin --- ");
+				
+				response.setErrorMsg("no activity type found with the given name, please contact administrator");
+				response.setResponse("no activity type found with the given name, please contact administrator");
+				response.setResult(false);
+				
+				return response;
+			}
+			
+			ActivityType activityType = activityTypes.get(0);
+			
+//			if(activityType == null)
+//			{
+//				logger.severe(" --- no activity type found with the given id --- ");
+//				
+//				response.setErrorMsg("no activity type found with the given id");
+//				response.setResponse("no activity type found with the given id");
+//				response.setResult(false);
+//				
+//				return response;
+//			}
+						
+//			try
+//			{
+//				logger.info(" ---  getting the activity type ---- ");
+//				
+//				activityType = (ActivityType) pm.getObjectById(new Path(activityTypeXri));
+//			}
+//			catch(Exception ex)
+//			{
+//				logger.info(" --- no activity type found with the given xri --- ");
+//				
+//				throw new ServiceException(ex);
+//			}
+			
+			MeetingQuery query = (MeetingQuery) pm.newQuery(Meeting.class);
+			
+			query.thereExistsActivityType().equalTo(activityType);
+			query.orderByModifiedAt().descending();
+			if(status != null) {
+				query.thereExistsProcessState().name().equalTo(status.getActualValue());
+			}
+			//ResponseDTO res = SpacioFmUtil.isResident(userId, currentEstateXri, pm, segmentName);
+			
+			query.thereExistsReportingContact().equalTo(reportingContact);
+			
+			List<Meeting> meetings = activitySegment.getActivity(query);
+			
+			VisitMapper mapper = new VisitMapper();
+			
+			int count = 0;
+			
+			for(Iterator<Meeting> i = meetings.listIterator(index); i.hasNext();)
+			{
+				Meeting meeting = i.next();
+				
+				VisitListDTO visit = mapper.geScheduledVisitList(meeting);
+				
+				scheduledVisits.add(visit);
+				
+				count++;
+				
+				logger.info("range count: " + count);
+				
+	            if(count > range)
+	            {
+	                break;
+	            }
+			}
+			
+			response.setResponse(scheduledVisits);
+			response.setResult(true);
+			
+			logger.info("get scheduled visits range is successful");
+		}
+		catch(Exception e)
+		{
+			logger.severe("error: " + e.getMessage() + e.getCause());
+			
+			response.setErrorMsg(e.getMessage());
+			response.setResponse(e.getMessage());
+			response.setResult(false);
+			
+		}
+		finally
+		{
+			if(!pm.isClosed())
+				pm.close();
+		}
+		
+		return response;
+	}
+	
+	@Override
+	public int getAllScheduledVisitsSize(VisitorStatus status)
+	{
+		logger.info(" --- get all scheduled visits size --- ");
+				
+		int count = 0;
+		
+		try
+		{
+//			if(activityTypeId == null)
+//			{
+//				logger.severe(" --- no activity type xri supplied --- ");
+//				
+//				return 0;
+//			}
+			
+			pm = conMgr.getPersistenceManager(userId);
+			
+			SegmentUtil segmentUtil = new SegmentUtil("CRX", segmentName);
+			
+			org.opencrx.kernel.activity1.jmi1.Segment activitySegment = segmentUtil.getActivitySegment(pm);
+			
+			ActivityTypeQuery activityTypeQuery = (ActivityTypeQuery) pm.newQuery(ActivityType.class);
+			
+			activityTypeQuery.name().equalTo(ACT_TYPE_EST_VISIT);
+			activityTypeQuery.orderByModifiedAt().descending();
+			
+			List<ActivityType> activityTypes = activitySegment.getActivityType(activityTypeQuery);
+			
+			if(activityTypes.isEmpty())
+			{
+				logger.info(" --- no activity type found with the given name, please contact admin --- ");
+				
+				return 0;
+			}
+			
+			ActivityType activityType = activityTypes.get(0);
+			
+//			if(activityType == null)
+//			{
+//				logger.severe(" --- no activity type found with the given id --- ");
+//				
+//				return 0;
+//			}
+						
+//			try
+//			{
+//				logger.info(" ---  getting the activity type ---- ");
+//				
+//				activityType = (ActivityType) pm.getObjectById(new Path(activityTypeXri));
+//			}
+//			catch(Exception ex)
+//			{
+//				logger.info(" --- no activity type found with the given xri --- ");
+//				
+//				throw new ServiceException(ex);
+//			}
+			
+			MeetingQuery query = (MeetingQuery) pm.newQuery(Meeting.class);
+			
+			query.thereExistsActivityType().equalTo(activityType);
+			query.orderByModifiedAt().descending();
+			if(status != null) {
+				query.thereExistsProcessState().name().equalTo(status.getActualValue());
+			}
+			//ResponseDTO res = SpacioFmUtil.isResident(userId, currentEstateXri, pm, segmentName);
+			
+	        QueryExtensionRecord queryExtension = PersistenceHelper.newQueryExtension(query);
+	        queryExtension.setClause(Database_1_Attributes.HINT_COUNT + "(1=1)");
+			
+			List<Meeting> meetings = activitySegment.getActivity(query);
+			
+			count = meetings.size();
+			
+			logger.info(" scheduled visits count: " + count);
+		}
+		catch(Exception e)
+		{
+			logger.severe("error: " + e.getMessage() + e.getCause());
+		}
+		finally
+		{
+			if(!pm.isClosed())
+				pm.close();
+		}
+		
+		return count;
+	}
+	
+	@Override
+	public int getAllScheduledVisitsSizeByResident(VisitorStatus status)
+	{
+		logger.info(" --- get all scheduled visits size --- ");
+				
+		int count = 0;
+		
+		try
+		{
+//			if(activityTypeId == null)
+//			{
+//				logger.severe(" --- no activity type xri supplied --- ");
+//				
+//				return 0;
+//			}
+			
+			pm = conMgr.getPersistenceManager(userId);
+			
+			SegmentUtil segmentUtil = new SegmentUtil("CRX", segmentName);
+			
+			org.opencrx.kernel.home1.jmi1.Segment userHomeSegment =  segmentUtil.getUserHomeSegment(pm);
+			
+			UserHome userHome = userHomeSegment.getUserHome(userId);
+			
+			if(userHome == null)
+			{
+				logger.info(" --- no user found with the given id --- ");
+			
+				return 0;
+			}
+			
+			Contact reportingContact = userHome.getContact();
+			
+			org.opencrx.kernel.activity1.jmi1.Segment activitySegment = segmentUtil.getActivitySegment(pm);
+			
+			ActivityTypeQuery activityTypeQuery = (ActivityTypeQuery) pm.newQuery(ActivityType.class);
+			
+			activityTypeQuery.name().equalTo(ACT_TYPE_EST_VISIT);
+			activityTypeQuery.orderByModifiedAt().descending();
+			
+			List<ActivityType> activityTypes = activitySegment.getActivityType(activityTypeQuery);
+			
+			if(activityTypes.isEmpty())
+			{
+				logger.info(" --- no activity type found with the given name, please contact admin --- ");
+				
+				return 0;
+			}
+			
+			ActivityType activityType = activityTypes.get(0);
+			
+//			if(activityType == null)
+//			{
+//				logger.severe(" --- no activity type found with the given id --- ");
+//				
+//				return 0;
+//			}
+						
+//			try
+//			{
+//				logger.info(" ---  getting the activity type ---- ");
+//				
+//				activityType = (ActivityType) pm.getObjectById(new Path(activityTypeXri));
+//			}
+//			catch(Exception ex)
+//			{
+//				logger.info(" --- no activity type found with the given xri --- ");
+//				
+//				throw new ServiceException(ex);
+//			}
+			
+			MeetingQuery query = (MeetingQuery) pm.newQuery(Meeting.class);
+			
+			query.thereExistsActivityType().equalTo(activityType);
+			query.orderByModifiedAt().descending();
+			if(status != null) {
+				query.thereExistsProcessState().name().equalTo(status.getActualValue());
+			}
+			//ResponseDTO res = SpacioFmUtil.isResident(userId, currentEstateXri, pm, segmentName);
+			
+			query.thereExistsReportingContact().equalTo(reportingContact);
+			
+	        QueryExtensionRecord queryExtension = PersistenceHelper.newQueryExtension(query);
+	        queryExtension.setClause(Database_1_Attributes.HINT_COUNT + "(1=1)");
+			
+			List<Meeting> meetings = activitySegment.getActivity(query);
+			
+			count = meetings.size();
+			
+			logger.info(" scheduled visits count: " + count);
+		}
+		catch(Exception e)
+		{
+			logger.severe("error: " + e.getMessage() + e.getCause());
+		}
+		finally
+		{
+			if(!pm.isClosed())
+				pm.close();
+		}
+		
+		return count;
+	}
+	
+	public ResponseDTO updateVisit(VisitDTO visit)
+	{
+		logger.info(" --- about to update visit --- ");
+		
+		ResponseDTO response = new ResponseDTO();
+		
+		try
+		{
+			pm = conMgr.getPersistenceManager(userId);
+			
+			SegmentUtil segmentUtil = new SegmentUtil(providerName, segmentName);
+			
+			org.opencrx.kernel.activity1.jmi1.Segment activitySegment = segmentUtil.getActivitySegment(pm);
+			
+			Activity activity = activitySegment.getActivity(visit.getKey().getUuid());
+			
+			if(activity == null)
+			{
+				logger.severe(" --- no activity found with the given id --- ");
+				
+				response.setErrorMsg("no scheduled visit found with id");
+				response.setResponse("no scheduled visit found with id");
+				response.setResult(false);
+				
+				return response;
+			}
+			
+			if(!(activity instanceof Meeting))
+			{
+				logger.info(" --- activity is not an instance of meeting --- ");
+				
+				response.setErrorMsg("activity is not an instance of meeting");
+				response.setResponse("activity is not an instance of meeting");
+				response.setResult(false);
+				
+				return response;
+			}
+			
+			VisitMapper mapper = new VisitMapper();
+			
+			Meeting meeting = (Meeting)activity;
+			
+			pm.currentTransaction().begin();
+			
+			meeting = mapper.editMeeting(visit, meeting, pm);
+			
+			pm.currentTransaction().commit();
+			
+			response.setResult(true);
+			response.setResponse(meeting.getIdentity());
+			
+			logger.info(" --- visit edited successfully! --- ");
+			
+			return response;
+				
+		}
+		catch(Exception e)
+		{
+			logger.severe(" --- error: " + e.getMessage() + e);
+			//e.printStackTrace();
+			response.setErrorMsg(e.getMessage());
+			response.setResponse(e);
+			response.setResult(false);
+		}
+		finally
+		{
+//			if(!pm.isClosed())
+//				pm.close();
+		}
+		
+		return response;
+	}
+	
+	public ResponseDTO getScheduledVisit(String visitId)
+	{
+		logger.info(" --- about to get visit by id --- ");
+		
+		ResponseDTO response = new ResponseDTO();
+		
+		try
+		{
+			VisitDTO visit = new VisitDTO();
+			
+			if(visitId == null)
+			{
+				logger.severe(" --- no visit Id supplied --- ");
+				
+				response.setErrorMsg("no visit Id supplied");
+				response.setResponse("no visit Id supplied");
+				response.setResult(false);
+				
+				return response;
+			}
+			
+			pm = conMgr.getPersistenceManager(userId);
+			
+//			SegmentUtil segmentUtil = new SegmentUtil("CRX", segmentName);
+//			
+//			org.opencrx.kernel.activity1.jmi1.Segment activitySegment = segmentUtil.getActivitySegment(pm);
+//			
+//			Task task = (Task) activitySegment.getActivity(CRMUtil.getQualifier(residentOrderXri));
+//			
+//			if(task == null)
+//			{
+//				logger.info(" --- no task found with given id --- ");
+//				
+//				return residentOrder;
+//			}
+			
+			SegmentUtil segmentUtil = new SegmentUtil(providerName, segmentName);
+			
+			org.opencrx.kernel.activity1.jmi1.Segment activitySegment = segmentUtil.getActivitySegment(pm);
+			
+			Activity activity = activitySegment.getActivity(visitId);
+			
+			if(activity == null)
+			{
+				logger.severe(" --- no activity found with the given id --- ");
+				
+				response.setErrorMsg(" no visit found with id ");
+				response.setResponse(" no visit found with id ");
+				response.setResult(false);
+				
+				return response;
+			}
+			
+			Meeting meeting = null;
+			
+			if(activity instanceof Meeting)
+			{
+				logger.info(" --- activity is an instance of meeting --- ");
+				
+				meeting = (Meeting)activity;
+			}
+			else
+			{
+				logger.severe(" --- activity is not an instance of meeting --- ");
+				
+				response.setErrorMsg("activity is not an instance of meeting");
+				response.setResponse("activity is not an instance of meeting");
+				response.setResult(false);
+				
+				return response;
+			}
+			
+//			try
+//			{
+//				meeting = (Meeting) pm.getObjectById(new Path(visitXri));
+//			}
+//			catch(Exception ex)
+//			{
+//				logger.severe("error: no visit found with the given id; " + ex.getMessage());
+//				
+//				throw new JDOObjectNotFoundException("no visit found with the given id");
+//			}
+			
+			VisitMapper mapper = new VisitMapper();
+			
+			visit = mapper.geScheduledVisit(meeting);
+			
+			response.setResponse(visit);
+			response.setResult(true);
+			
+			logger.info("get schedule visit fetched successfully");
+		}
+		catch(Exception e)
+		{
+			logger.severe("error: " + e.getMessage() + e.getCause());
+			
+			response.setErrorMsg(e.getMessage());
+			response.setResponse(e.getMessage());
+			response.setResult(false);
+		}
+		finally
+		{
+			if(!pm.isClosed())
+				pm.close();
+		}
+		
+		return response;
+	}
+	
+	@Override
+	public ResponseDTO doScheduleVisitFollowUp(FollowUpDTO followUp)
+	{
+		logger.info(" --- about to do follow up --- ");
+		
+		ResponseDTO response = new ResponseDTO();
+		
+		com.spacio.crm.extension1.jmi1.ScheduleVisitFollowUpResult out = null;
+		
+		try
+		{
+			pm = conMgr.getPersistenceManager(userId);
+			
+			SegmentUtil segmentUtil = new SegmentUtil("CRX", segmentName);
+			
+			com.spacio.crm.extension1.jmi1.Segment extensionSegment = segmentUtil.getExtensionSegment(pm);
+			
+			com.spacio.crm.extension1.jmi1.ScheduleVisitFollowUpParams in = Structures.create(
+					com.spacio.crm.extension1.jmi1.ScheduleVisitFollowUpParams.class,
+	        		Datatypes.member(com.spacio.crm.extension1.jmi1.ScheduleVisitFollowUpParams.Member.activityUri, followUp.getActivityXri()),
+	        		Datatypes.member(com.spacio.crm.extension1.jmi1.ScheduleVisitFollowUpParams.Member.category, followUp.getCategory()),
+	        		Datatypes.member(com.spacio.crm.extension1.jmi1.ScheduleVisitFollowUpParams.Member.description, followUp.getDescription()),
+	        		Datatypes.member(com.spacio.crm.extension1.jmi1.ScheduleVisitFollowUpParams.Member.followUpContactXri, followUp.getFollowUpContactXri()),
+	        		Datatypes.member(com.spacio.crm.extension1.jmi1.ScheduleVisitFollowUpParams.Member.name, followUp.getName()),
+//	        		Datatypes.member(com.spacio.crm.extension1.jmi1.CreateEstateActivityParams.Member.scheduledEnd, new Date()),
+	        		Datatypes.member(com.spacio.crm.extension1.jmi1.ScheduleVisitFollowUpParams.Member.transitionName, followUp.getTransitionName())
+					);
+			
+			pm.currentTransaction().begin();
+			
+			out = extensionSegment.scheduleVisitFollowUp(in);
+			
+			pm.currentTransaction().commit();
+		
+            if (out == null)
+                logger.fine(" null response. ");
+              else
+                logger.fine(" response is not null. content: " + out.toString());
+              
+              
+             // logger.fine(" result: " + out.isResult() + " errorcode: " + out.getErrorCode() + " reason: " + out.getErrorMsg());
+            
+             ReturnStatusT outcome = out.getStatus();
+             
+               if (outcome.getReturnCode() == BasicException.Code.NONE) 
+               {
+                  logger.info(" ticket follow up successful ! ");
+                   response.setResult(true);
+                   response.setResponse(out.getFollowUp());
+                              
+                   logger.fine(" commit ! ");
+               }
+               else
+               {                 
+                   logger.severe(" error with ticket follow up. code: " + outcome.getReturnParams());            
+                    
+                    response.setErrors(outcome.getReturnParams());
+                    response.setResult(false);
+                 
+                   logger.fine(" rollback ! ");             
+               }
+		
+		}
+		catch(Exception e)
+		{
+			logger.info(" --- error: " + e.getMessage() + e);
+			
+			//e.printStackTrace();
+			
+			response.setErrorMsg(e.getMessage());
+			response.setResponse(e);
+			response.setResult(false);
+		}
+		finally
+		{
+			if(!pm.isClosed())
+				pm.close();
+		}
+		
+		return response;
+	}
+	
+}

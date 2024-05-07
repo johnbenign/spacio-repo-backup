@@ -1,0 +1,21 @@
+package com.spacio.fm.core.activity.dao;
+
+import com.spacio.crx.dao.GenericDAO;
+import com.spacio.crx.dto.ResponseDTO;
+import com.spacio.fm.core.activity.dto.CreateEstateMeetingDTO;
+import com.spacio.fm.core.activity.dto.EstateMeetingDTO;
+import com.spacio.fm.core.activity.dto.FollowUpDTO;
+import com.spacio.fm.core.activity.enums.EstateMeetingStatus;
+
+public interface EstateMeetingDAO extends GenericDAO
+{
+	public ResponseDTO scheduleEstateMeeting(CreateEstateMeetingDTO estateMeeting);
+	
+	public ResponseDTO updateEstateMeeting(EstateMeetingDTO estateMeeting);
+	
+	public ResponseDTO getScheduledEstateMeeting(String estateMeetingId);
+	
+	public ResponseDTO doScheduleEstateMeetingFollowUp(FollowUpDTO followUp);
+
+	ResponseDTO getAllScheduledEstateMeetings(EstateMeetingStatus status);
+}

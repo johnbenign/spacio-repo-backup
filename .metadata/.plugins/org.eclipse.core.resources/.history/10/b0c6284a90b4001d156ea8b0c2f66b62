@@ -1,0 +1,39 @@
+package com.spacio.fm.core.activity.bo;
+
+import com.spacio.crx.bo.GenericBO;
+import com.spacio.crx.dto.ResponseDTO;
+import com.spacio.fm.core.activity.dto.CreateVisitDTO;
+import com.spacio.fm.core.activity.dto.FollowUpDTO;
+import com.spacio.fm.core.activity.dto.VisitDTO;
+import com.spacio.fm.core.activity.enums.VisitorStatus;
+
+public interface VisitBO extends GenericBO
+{
+	public ResponseDTO scheduleVisit(CreateVisitDTO order);
+
+	public ResponseDTO updateVisit(VisitDTO visit);
+
+	public ResponseDTO getScheduledVisit(String visitId);
+
+	public ResponseDTO doScheduleVisitFollowUp(FollowUpDTO followUp);
+
+	ResponseDTO getAllPendingVisits();
+
+	ResponseDTO getAllPendingVisitsByResident();
+
+	ResponseDTO getAllApprovedVisits();
+
+	ResponseDTO getAllApprovedVisitsByResident();
+
+	ResponseDTO getAllDeniedVisits();
+
+	ResponseDTO getAllDeniedVisitsByResident();
+
+	ResponseDTO getAllScheduledVisits(VisitorStatus status);
+
+	ResponseDTO getAllScheduledVisitsByResident(VisitorStatus status);
+
+	ResponseDTO getAllScheduledVisits(int index, int range, VisitorStatus status);
+
+	ResponseDTO getAllScheduledVisitsByResident(int index, int range, VisitorStatus status);
+}

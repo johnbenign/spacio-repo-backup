@@ -1,0 +1,16 @@
+package com.spacio.fm.core.home.dao;
+
+import com.spacio.crx.dao.GenericDAO;
+import com.spacio.crx.dto.ResponseDTO;
+import com.spacio.fm.core.home.dto.CreateUserDTO;
+
+public interface HomeDAO extends GenericDAO
+{
+
+	
+	public ResponseDTO createFMUser(CreateUserDTO createUser);
+	
+	public ResponseDTO createResidentUser(CreateUserDTO createUser);
+
+	ResponseDTO sendPasswordLinkReset(String email);
+}

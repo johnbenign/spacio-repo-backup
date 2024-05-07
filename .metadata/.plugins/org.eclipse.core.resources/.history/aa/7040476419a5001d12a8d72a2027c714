@@ -1,0 +1,15 @@
+package com.spacio.fm.core.home.bo;
+
+import com.spacio.crx.bo.GenericBO;
+import com.spacio.crx.dto.ResponseDTO;
+//import com.spacio.fm.core.dto.ResponseDTO;
+import com.spacio.fm.core.home.dto.CreateUserDTO;
+import com.spacio.fm.core.home.dto.ResetPasswordDto;
+
+public interface HomeBO extends GenericBO {
+	public ResponseDTO createFMUser(CreateUserDTO createUser);
+	public ResponseDTO createResidentUser(CreateUserDTO createUser);
+	ResponseDTO sendPasswordLinkReset(String email);
+	ResponseDTO resetPassword(ResetPasswordDto dto);
+	
+}

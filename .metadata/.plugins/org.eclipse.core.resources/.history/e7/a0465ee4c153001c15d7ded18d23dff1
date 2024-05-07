@@ -1,0 +1,6 @@
+package snippet;
+
+public class Snippet {
+	mvn install:install-file -Dfile=CrxCustom-0.0.1-SNAPSHOT.jar -DgroupId=com.spacio.crx -DartifactId=CrxCustom -Dversion=0.0.1 -Dpackaging=jar -DcreateChecksum=true
+}
+

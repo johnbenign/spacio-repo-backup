@@ -1,0 +1,470 @@
+package com.spacio.fm.controller.activity;
+
+import java.util.logging.Logger;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.validation.Valid;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.spacio.crx.dto.PrimaryKey;
+import com.spacio.crx.dto.ResponseDTO;
+import com.spacio.fm.core.activity.bo.EstateMeetingBO;
+import com.spacio.fm.core.activity.dto.CreateEstateMeetingDTO;
+import com.spacio.fm.core.activity.dto.EstateMeetingDTO;
+import com.spacio.fm.core.activity.dto.FollowUpDTO;
+import com.spacio.fm.core.activity.enums.EstateMeetingStatus;
+import com.spacio.fm.exception.BadRequestException;
+
+@RestController
+@CrossOrigin
+@RequestMapping("/api/meetings")
+public class EstateMeetingController
+{
+	private static final Logger logger = Logger.getLogger(EstateMeetingController.class.getName());
+
+	@Value("${provider}")
+	private String provider;
+
+	@Autowired
+	private EstateMeetingBO meetingBO;
+
+	public EstateMeetingController() {
+		logger.info(" -- EstateMeetingController() -- ");
+	}
+
+	@PostMapping
+	@ResponseStatus(HttpStatus.CREATED)
+	public ResponseEntity<?> scheduleMeeting(HttpServletRequest request, @Valid @RequestBody CreateEstateMeetingDTO meeting)
+	{
+
+		logger.info(" -- scheduleMeeting -- ");
+
+		ResponseDTO response = new ResponseDTO();
+		
+		try
+		{
+			String provider = request.getHeader("provider");
+			String tenantId = request.getHeader("tenant-id");
+			String userId = request.getHeader("user-id");
+
+			logger.info(" --- provider : " + provider + " ;; segment : " + tenantId + ";; userId : " + userId);
+			
+			meetingBO.setCredentials(provider, tenantId, userId);
+			
+			response = meetingBO.scheduleEstateMeeting(meeting);
+
+			if (!response.getResult()) {
+				logger.severe(" unable to schedule estate meeting ! ");
+
+				throw new BadRequestException(response);
+			} else {
+				return ResponseEntity.status(HttpStatus.CREATED).body(response);
+			}
+		}
+		catch(BadRequestException e)
+		{
+			
+			logger.info(" --- error : " + e.getResponse().getErrorMsg());
+			
+			response.setErrorMsg(e.getMessage());
+			response.setResponse(e.getResponse().getErrorMsg());
+			response.setResult(false);
+			//e.setErrorMsg(e.getResponse());			
+			return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+		}
+
+	}
+
+	@GetMapping
+	public ResponseEntity<?> getAllMeetings(
+			HttpServletRequest request,
+			@RequestParam int index,
+			@RequestParam int range,
+			@RequestParam EstateMeetingStatus status) {
+
+		logger.info(" -- getAllMeetings -- ");
+		
+		ResponseDTO response = new ResponseDTO();
+		
+		try
+		{
+			String provider = request.getHeader("provider");
+			String tenantId = request.getHeader("tenant-id");
+			String userId = request.getHeader("user-id");
+
+			logger.info(" --- provider : " + provider + " ;; segment : " + tenantId + ";; userId : " + userId);
+			
+			meetingBO.setCredentials(provider, tenantId, userId);
+			
+			response = meetingBO.getAllScheduledEstateMeetings(index, range);
+
+			if (!response.getResult()) {
+				logger.severe(" unable to get all the estate meetings --- ");
+
+				throw new BadRequestException(response);
+			}
+
+			// List<ResidentOrderListDTO> resOrderList = (List<ResidentOrderListDTO>)
+			// response.getResponse();
+
+			return ResponseEntity.ok(response);
+		}
+		catch(BadRequestException e)
+		{
+			logger.info(" --- error : " + e.getResponse().getErrorMsg());
+			
+			response.setErrorMsg(e.getMessage());
+			response.setResponse(e.getResponse().getErrorMsg());
+			response.setResult(false);
+			//e.setErrorMsg(e.getResponse());			
+			return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+		}
+	}
+
+	@GetMapping("/count")
+	public ResponseEntity<?> getMeetingsSize(HttpServletRequest request) {
+
+		logger.info(" -- getMeetingsSize count -- ");
+		
+		try
+		{
+			String provider = request.getHeader("provider");
+			String tenantId = request.getHeader("tenant-id");
+			String userId = request.getHeader("user-id");
+			
+			logger.info(" --- provider : " + provider + " ;; segment : " + tenantId + ";; userId : " + userId);
+			
+			long visitCount = 0;
+			
+			meetingBO.setCredentials(provider, tenantId, userId);
+			
+			visitCount = meetingBO.getAllScheduledEstateMeetingsSize();
+
+			// return null;
+
+			return ResponseEntity.ok(visitCount);
+		}
+		catch(Exception e)
+		{
+			logger.info(" --- error : " + e.getMessage());
+			
+			
+			//e.setErrorMsg(e.getResponse());			
+			return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
+		}
+	}
+
+	@GetMapping("/{id}")
+	public ResponseEntity<?> getEstateMeeting(HttpServletRequest request, @PathVariable String id) {
+
+		logger.info(" -- getEstateMeeting -- ");
+		
+		ResponseDTO response = new ResponseDTO();
+		
+		try
+		{
+			String provider = request.getHeader("provider");
+			String tenantId = request.getHeader("tenant-id");
+			String userId = request.getHeader("user-id");
+			
+			logger.info(" --- provider : " + provider + " ;; segment : " + tenantId + ";; userId : " + userId);
+			
+			meetingBO.setCredentials(provider, tenantId, userId);			
+			// String generatedUri = baseUri + "/provider/" + provider + "/segment/" +
+			// segment + "/activity/" + id.trim();
+
+			// logger.info(" generated Uri: " + generatedUri);
+
+			response = meetingBO.getScheduledEstateMeeting(id);
+
+			if (!response.getResult()) {
+				logger.info(" --- unable to get estate meeting by id: " + response.getErrorMsg());
+
+				throw new BadRequestException(response);
+			}
+
+			return ResponseEntity.ok(response);
+		}
+		catch(BadRequestException e)
+		{
+			logger.info(" --- error : " + e.getResponse().getErrorMsg());
+			
+			response.setErrorMsg(e.getMessage());
+			response.setResponse(e.getResponse().getErrorMsg());
+			response.setResult(false);
+			//e.setErrorMsg(e.getResponse());			
+			return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+		}
+	}
+
+	@PutMapping("/{meeting-id}")
+	public ResponseEntity<?> updateEstateMeeting(HttpServletRequest request, @Valid @RequestBody EstateMeetingDTO meeting, @PathVariable("meeting-id") String meetingId) {
+
+		logger.info(" -- updateEstateMeeting() -- ");
+		
+		ResponseDTO response = new ResponseDTO();
+		
+		try
+		{
+			String provider = request.getHeader("provider");
+			String tenantId = request.getHeader("tenant-id");
+			String userId = request.getHeader("user-id");
+			
+			logger.info(" --- provider : " + provider + " ;; segment : " + tenantId + ";; userId : " + userId);
+			
+			PrimaryKey meetingPK = new PrimaryKey(meetingId);
+			
+			meeting.setKey(meetingPK);
+
+			meetingBO.setCredentials(provider, tenantId, userId);
+
+			response = meetingBO.updateEstateMeeting(meeting);
+
+			if (!response.getResult()) {
+				logger.severe(" unable to update estate meeting ! ");
+
+				throw new BadRequestException(response);
+			} else {
+				return ResponseEntity.ok(response);
+			}
+		}
+		catch(BadRequestException e)
+		{
+			logger.info(" --- error : " + e.getResponse().getErrorMsg());
+			
+			response.setErrorMsg(e.getMessage());
+			response.setResponse(e.getResponse().getErrorMsg());
+			response.setResult(false);
+			//e.setErrorMsg(e.getResponse());			
+			return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+		}
+
+	}
+	
+	@PostMapping("/follow-up")
+	public ResponseEntity<?> doEstateMeetingFollowUp(HttpServletRequest request, @Valid @RequestBody FollowUpDTO followUp)
+	{
+		logger.info(" --- doEstateMeetingFollowUp() --- ");
+		
+		ResponseDTO response = new ResponseDTO();
+		
+		try
+		{
+			String provider = request.getHeader("provider");
+			String tenantId = request.getHeader("tenant-id");
+			String userId = request.getHeader("user-id");
+
+			logger.info(" --- provider : " + provider + " ;; segment : " + tenantId + ";; userId : " + userId);
+			
+			meetingBO.setCredentials(provider, tenantId, userId);
+			
+			response = meetingBO.doScheduleEstateMeetingFollowUp(followUp);
+			
+			if (!response.getResult())
+		     {  	    		 
+		    	 logger.severe(" unable to do follow up ! "); 
+		     	   
+		     	  throw new BadRequestException(response);	        
+		     }
+	   	 	else
+	   	 	{
+	   	 		return ResponseEntity.ok(response);
+	   	 	}
+		}
+		catch(BadRequestException e)
+		{
+			logger.info(" --- error : " + e.getResponse().getErrorMsg());
+			
+			response.setErrorMsg(e.getMessage());
+			response.setResponse(e.getResponse().getErrorMsg());
+			response.setResult(false);
+			//e.setErrorMsg(e.getResponse());			
+			return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+		}
+	}
+	
+	@GetMapping(value = "/pending-meetings")
+	public ResponseEntity<?> getAllPendingMeetings(HttpServletRequest request)
+	{
+		logger.info(" --- get all pending meetings --- ");
+		
+		ResponseDTO response = new ResponseDTO();
+		
+		try
+		{
+
+			String provider = request.getHeader("provider");
+			String tenantId = request.getHeader("tenant-id");
+			String userId = request.getHeader("user-id");
+
+			logger.info(" --- provider : " + provider + " ;; segment : " + tenantId + ";; userId : " + userId);
+			
+			meetingBO.setCredentials(provider, tenantId, userId);
+			
+			response = meetingBO.getAllPendingMeetings();
+			
+			if (!response.getResult())
+		     {  	    		 
+		    	 logger.severe(" failed to get pending meeting! "); 
+		     	   
+		     	  throw new BadRequestException(response);	        
+		     }
+	   	 	else
+	   	 	{
+	   	 		return ResponseEntity.ok(response);
+	   	 	}
+		}
+		catch(BadRequestException e)
+		{
+			logger.info(" --- error : " + e.getResponse().getErrorMsg());
+			
+			response.setErrorMsg(e.getMessage());
+			response.setResponse(e.getResponse().getErrorMsg());
+			response.setResult(false);
+			//e.setErrorMsg(e.getResponse());			
+			return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+		}
+	}
+	
+//	@GetMapping(value = "/pending-meetings")
+	public ResponseEntity<?> getAllPendingMeetingsByResident(HttpServletRequest request)
+	{
+		logger.info(" --- get all pending meetings --- ");
+		
+		ResponseDTO response = new ResponseDTO();
+		
+		try
+		{
+
+			String provider = request.getHeader("provider");
+			String tenantId = request.getHeader("tenant-id");
+			String userId = request.getHeader("user-id");
+
+			logger.info(" --- provider : " + provider + " ;; segment : " + tenantId + ";; userId : " + userId);
+			
+			meetingBO.setCredentials(provider, tenantId, userId);
+			
+			response = meetingBO.getAllPendingMeetingsByResident();
+			
+			if (!response.getResult())
+		     {  	    		 
+		    	 logger.severe(" failed to get pending meeting! "); 
+		     	   
+		     	  throw new BadRequestException(response);	        
+		     }
+	   	 	else
+	   	 	{
+	   	 		return ResponseEntity.ok(response);
+	   	 	}
+		}
+		catch(BadRequestException e)
+		{
+			logger.info(" --- error : " + e.getResponse().getErrorMsg());
+			
+			response.setErrorMsg(e.getMessage());
+			response.setResponse(e.getResponse().getErrorMsg());
+			response.setResult(false);
+			//e.setErrorMsg(e.getResponse());			
+			return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+		}
+	}
+	
+	@GetMapping(value = "/completed-meetings")
+	public ResponseEntity<?> getAllCompletedMeetings(HttpServletRequest request)
+	{
+		logger.info(" --- get all completed meetings --- ");
+		
+		ResponseDTO response = new ResponseDTO();
+		
+		try
+		{
+
+			String provider = request.getHeader("provider");
+			String tenantId = request.getHeader("tenant-id");
+			String userId = request.getHeader("user-id");
+
+			logger.info(" --- provider : " + provider + " ;; segment : " + tenantId + ";; userId : " + userId);
+			
+			meetingBO.setCredentials(provider, tenantId, userId);
+			
+			response = meetingBO.getAllCompletedMeetings();
+			
+			if (!response.getResult())
+		     {  	    		 
+		    	 logger.severe(" failed to get completed meeting! "); 
+		     	   
+		     	  throw new BadRequestException(response);	        
+		     }
+	   	 	else
+	   	 	{
+	   	 		return ResponseEntity.ok(response);
+	   	 	}
+		}
+		catch(BadRequestException e)
+		{
+			logger.info(" --- error : " + e.getResponse().getErrorMsg());
+			
+			response.setErrorMsg(e.getMessage());
+			response.setResponse(e.getResponse().getErrorMsg());
+			response.setResult(false);
+			//e.setErrorMsg(e.getResponse());			
+			return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+		}
+	}
+	
+	public ResponseEntity<?> getAllCompletedMeetingsByResident(HttpServletRequest request)
+	{
+		logger.info(" --- get all completed meetings --- ");
+		
+		ResponseDTO response = new ResponseDTO();
+		
+		try
+		{
+
+			String provider = request.getHeader("provider");
+			String tenantId = request.getHeader("tenant-id");
+			String userId = request.getHeader("user-id");
+
+			logger.info(" --- provider : " + provider + " ;; segment : " + tenantId + ";; userId : " + userId);
+			
+			meetingBO.setCredentials(provider, tenantId, userId);
+			
+			response = meetingBO.getAllCompletedMeetingsByResident();
+			
+			if (!response.getResult())
+		     {  	    		 
+		    	 logger.severe(" failed to get completed meeting! "); 
+		     	   
+		     	  throw new BadRequestException(response);	        
+		     }
+	   	 	else
+	   	 	{
+	   	 		return ResponseEntity.ok(response);
+	   	 	}
+		}
+		catch(BadRequestException e)
+		{
+			logger.info(" --- error : " + e.getResponse().getErrorMsg());
+			
+			response.setErrorMsg(e.getMessage());
+			response.setResponse(e.getResponse().getErrorMsg());
+			response.setResult(false);
+			//e.setErrorMsg(e.getResponse());			
+			return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+		}
+	}
+}

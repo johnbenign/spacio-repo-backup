@@ -1,0 +1,28 @@
+package com.spacio.fm.core.activity.dao;
+
+import java.util.List;
+
+import com.spacio.crx.dao.GenericDAO;
+import com.spacio.crx.dto.ResponseDTO;
+import com.spacio.fm.core.activity.dto.CreateWorkOrderDTO;
+import com.spacio.fm.core.activity.dto.FollowUpDTO;
+import com.spacio.fm.core.activity.dto.WorkOrderDTO;
+import com.spacio.fm.core.activity.dto.WorkOrderFollowUpDTO;
+import com.spacio.fm.core.activity.enums.WorkOrderConstant;
+
+public interface WorkOrderDAO extends GenericDAO
+{
+	ResponseDTO createWorkOrder(CreateWorkOrderDTO workOrder);
+	
+	ResponseDTO updateWorkOrder(WorkOrderDTO workOrder);
+	
+	ResponseDTO createWorkOrderTasks(List<String> workOrderTasks, String workOrderXri);
+	
+	ResponseDTO getWorkOrder(String workOrderId);
+	
+	ResponseDTO doWorkOrderFollowUp(WorkOrderFollowUpDTO followUp);
+
+	ResponseDTO doWorkOrderTasksFollowUp(FollowUpDTO followUp);
+
+	ResponseDTO getAllWorkOrders(WorkOrderConstant status);
+}

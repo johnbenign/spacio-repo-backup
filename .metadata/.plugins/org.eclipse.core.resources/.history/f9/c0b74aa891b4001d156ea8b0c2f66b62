@@ -1,0 +1,585 @@
+package com.spacio.fm.controller.activity;
+
+import java.util.logging.Logger;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.validation.Valid;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.spacio.crx.dto.PrimaryKey;
+import com.spacio.crx.dto.ResponseDTO;
+import com.spacio.fm.core.activity.bo.VisitBO;
+import com.spacio.fm.core.activity.dto.CreateVisitDTO;
+import com.spacio.fm.core.activity.dto.FollowUpDTO;
+import com.spacio.fm.core.activity.dto.VisitDTO;
+import com.spacio.fm.core.activity.enums.VisitorStatus;
+import com.spacio.fm.exception.BadRequestException;
+
+@RestController
+@CrossOrigin
+@RequestMapping("/api/visits")
+public class VisitController 
+{
+	private static final Logger logger = Logger.getLogger(VisitController.class.getName());
+
+	@Value("${provider}")
+	private String provider;
+
+	@Autowired
+	private VisitBO visitBO;
+
+	public VisitController() {
+		logger.info(" -- VisitController() -- ");
+	}
+
+	@PostMapping
+	public ResponseEntity<?> scheduleVisit(HttpServletRequest request, @Valid @RequestBody CreateVisitDTO visit)
+	{
+
+		logger.info(" -- scheduleVisit -- ");
+
+		ResponseDTO response = new ResponseDTO();
+		
+		try
+		{
+			String provider = request.getHeader("provider");
+			String tenantId = request.getHeader("tenant-id");
+			String userId = request.getHeader("user-id");
+			
+			visitBO.setCredentials(provider, tenantId, userId);
+
+			response = visitBO.scheduleVisit(visit);
+
+			if (!response.getResult()) {
+				logger.severe(" unable to schedule visit ! ");
+
+				throw new BadRequestException(response);
+			} else {
+				return ResponseEntity.ok(response);
+			}
+		}
+		catch(BadRequestException e)
+		{
+			logger.info(" --- error : " + e.getResponse().getErrorMsg());
+			
+			response.setErrorMsg(e.getMessage());
+			response.setResponse(e.getResponse().getErrorMsg());
+			response.setResult(false);
+			//e.setErrorMsg(e.getResponse());			
+			return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+		}
+	}
+
+	@GetMapping
+	public ResponseEntity<?> getAllVisits(
+			HttpServletRequest request,
+			@RequestParam int index,
+			@RequestParam int range,
+			@RequestParam VisitorStatus status) {
+
+		logger.info(" -- getAllVisits -- ");
+		
+		ResponseDTO response = new ResponseDTO();
+		
+		try
+		{
+			String provider = request.getHeader("provider");
+			String tenantId = request.getHeader("tenant-id");
+			String userId = request.getHeader("user-id");
+
+			visitBO.setCredentials(provider, tenantId, userId);
+
+			//visitBO.setActivityTypeId(requestDTO.getActivityTypeId());
+
+			response = visitBO.getAllScheduledVisits(index, range, status);
+
+			if (!response.getResult()) {
+				logger.severe(" unable to get all the visits --- ");
+
+				throw new BadRequestException(response);
+			}
+
+			// List<ResidentOrderListDTO> resOrderList = (List<ResidentOrderListDTO>)
+			// response.getResponse();
+
+			return ResponseEntity.ok(response);
+		}
+		catch(BadRequestException e)
+		{
+			logger.info(" --- error : " + e.getResponse().getErrorMsg());
+			
+			response.setErrorMsg(e.getMessage());
+			response.setResponse(e.getResponse().getErrorMsg());
+			response.setResult(false);
+			//e.setErrorMsg(e.getResponse());			
+			return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+		}
+	}
+	
+	@GetMapping("/get-by-resident")
+	public ResponseEntity<?> getAllVisitsByResident(HttpServletRequest request,
+			@RequestParam int index,
+			@RequestParam int range,
+			@RequestParam VisitorStatus status) {
+
+		logger.info(" -- getAllVisits -- ");
+		
+		ResponseDTO response = new ResponseDTO();
+		
+		try
+		{
+			String provider = request.getHeader("provider");
+			String tenantId = request.getHeader("tenant-id");
+			String userId = request.getHeader("user-id");
+
+			visitBO.setCredentials(provider, tenantId, userId);
+
+			//visitBO.setActivityTypeId(requestDTO.getActivityTypeId());
+
+			response = visitBO.getAllScheduledVisitsByResident(index, range, status);
+
+			if (!response.getResult()) {
+				logger.severe(" unable to get all the visits --- ");
+
+				throw new BadRequestException(response);
+			}
+
+			// List<ResidentOrderListDTO> resOrderList = (List<ResidentOrderListDTO>)
+			// response.getResponse();
+
+			return ResponseEntity.ok(response);
+		}
+		catch(BadRequestException e)
+		{
+			logger.info(" --- error : " + e.getResponse().getErrorMsg());
+			
+			response.setErrorMsg(e.getMessage());
+			response.setResponse(e.getResponse().getErrorMsg());
+			response.setResult(false);
+			//e.setErrorMsg(e.getResponse());			
+			return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+		}
+	}
+
+	@GetMapping("/count")
+	public ResponseEntity<Long> getVisitsSize(HttpServletRequest request) {
+
+		logger.info(" -- getVisitsSize count -- ");
+		
+		String provider = request.getHeader("provider");
+		String tenantId = request.getHeader("tenant-id");
+		String userId = request.getHeader("user-id");
+
+		long visitCount = 0;
+
+		visitBO.setCredentials(provider, tenantId, userId);
+		
+		//visitBO.setActivityTypeId(activityTypeId);
+
+		visitCount = visitBO.getAllScheduledVisitsSize();
+
+		// return null;
+
+		return ResponseEntity.ok(visitCount);
+	}
+	
+	@GetMapping("/get-by-resident/count")
+	public ResponseEntity<Long> getVisitsByResidentSize(HttpServletRequest request) {
+
+		logger.info(" -- getVisitsSize count -- ");
+		
+		String provider = request.getHeader("provider");
+		String tenantId = request.getHeader("tenant-id");
+		String userId = request.getHeader("user-id");
+		String currentEstateXri = request.getHeader("current-estate-xri");
+
+		long visitCount = 0;
+
+		visitBO.setCredentials(provider, tenantId, userId);
+		
+		//visitBO.setActivityTypeId(activityTypeId);
+
+		visitCount = visitBO.getAllScheduledVisitsByResidentSize();
+
+		// return null;
+
+		return ResponseEntity.ok(visitCount);
+	}
+
+	@GetMapping("/{id}")
+	public ResponseEntity<?> getVisit(HttpServletRequest request, @PathVariable String id) {
+
+		logger.info(" -- getVisit -- ");
+		
+		ResponseDTO response = new ResponseDTO();
+		
+		try
+		{
+			String provider = request.getHeader("provider");
+			String tenantId = request.getHeader("tenant-id");
+			String userId = request.getHeader("user-id");
+			
+			visitBO.setCredentials(provider, tenantId, userId);
+
+			// String generatedUri = baseUri + "/provider/" + provider + "/segment/" +
+			// segment + "/activity/" + id.trim();
+
+			// logger.info(" generated Uri: " + generatedUri);
+
+			response = visitBO.getScheduledVisit(id);
+
+			if (!response.getResult()) {
+				logger.info(" --- unable to get visit by id: " + response.getErrorMsg());
+
+				throw new BadRequestException(response);
+			}
+
+			return ResponseEntity.ok(response);
+		}
+		catch(BadRequestException e)
+		{
+			logger.info(" --- error : " + e.getResponse().getErrorMsg());
+			
+			response.setErrorMsg(e.getMessage());
+			response.setResponse(e.getResponse().getErrorMsg());
+			response.setResult(false);
+			//e.setErrorMsg(e.getResponse());			
+			return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+		}
+	}
+
+	@RequestMapping(method=RequestMethod.PUT, value="/{visit-id}", produces=MediaType.APPLICATION_JSON_VALUE)
+	public ResponseEntity<?> updateVisit(HttpServletRequest request, @RequestBody VisitDTO visit, @PathVariable("visit-id") String visitId) {
+
+		logger.info(" -- updateVisit() -- ");
+		
+		ResponseDTO response = new ResponseDTO();
+		
+		try
+		{
+			String provider = request.getHeader("provider");
+			String tenantId = request.getHeader("tenant-id");
+			String userId = request.getHeader("user-id");
+			
+			PrimaryKey visitPK = new PrimaryKey(visitId);
+			
+			visit.setKey(visitPK);
+
+			visitBO.setCredentials(provider, tenantId, userId);
+
+			response = visitBO.updateVisit(visit);
+
+			if (!response.getResult()) {
+				logger.severe(" unable to update visit ! ");
+
+				throw new BadRequestException(response);
+			} else {
+				return ResponseEntity.ok(response);
+			}
+		}
+		catch(BadRequestException e)
+		{
+			logger.info(" --- error : " + e.getResponse().getErrorMsg());
+			
+			response.setErrorMsg(e.getMessage());
+			response.setResponse(e.getResponse().getErrorMsg());
+			response.setResult(false);
+			//e.setErrorMsg(e.getResponse());			
+			return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+		}
+	}
+	
+	@PostMapping("/follow-up")
+	public ResponseEntity<?> doVisitFollowUp(HttpServletRequest request, @Valid @RequestBody FollowUpDTO followUp)
+	{
+		logger.info(" --- doVisitFollowUp() --- ");
+		
+		ResponseDTO response = new ResponseDTO();
+		
+		try
+		{
+			String provider = request.getHeader("provider");
+			String tenantId = request.getHeader("tenant-id");
+			String userId = request.getHeader("user-id");
+			
+			visitBO.setCredentials(provider, tenantId, userId);
+			
+			response = visitBO.doScheduleVisitFollowUp(followUp);
+			
+			if (!response.getResult())
+		     {  	    		 
+		    	 logger.severe(" unable to do follow up ! "); 
+		     	   
+		     	  throw new BadRequestException(response);	        
+		     }
+	   	 	else
+	   	 	{
+	   	 		return ResponseEntity.ok(response);
+	   	 	}
+		}
+		catch(BadRequestException e)
+		{
+			logger.info(" --- error : " + e.getResponse().getErrorMsg());
+			
+			response.setErrorMsg(e.getMessage());
+			response.setResponse(e.getResponse().getErrorMsg());
+			response.setResult(false);
+			//e.setErrorMsg(e.getResponse());			
+			return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+		}
+	}
+	
+	@GetMapping(value = "/pending-visits")
+	public ResponseEntity<?> getAllPendingVisits(HttpServletRequest request)
+	{
+		logger.info(" --- getting all pending visits --- ");
+		
+		ResponseDTO response = new ResponseDTO();
+		
+		try
+		{
+			String provider = request.getHeader("provider");
+			String tenantId = request.getHeader("tenant-id");
+			String userId = request.getHeader("user-id");
+			
+			visitBO.setCredentials(provider, tenantId, userId);
+			
+			response = visitBO.getAllPendingVisits();
+			
+			if (!response.getResult())
+		     {  	    		 
+		    	 logger.severe("failed to get all pending visits"); 
+		     	   
+		     	  throw new BadRequestException(response);	        
+		     }
+	   	 	else
+	   	 	{
+	   	 		return ResponseEntity.ok(response);
+	   	 	}
+		}
+		catch(BadRequestException e)
+		{
+			logger.info(" --- error : " + e.getResponse().getErrorMsg());
+			
+			response.setErrorMsg(e.getMessage());
+			response.setResponse(e.getResponse().getErrorMsg());
+			response.setResult(false);
+			//e.setErrorMsg(e.getResponse());			
+			return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+		}
+	}
+	
+	@GetMapping(value = "/pending-visits-by-resident")
+	public ResponseEntity<?> getAllPendingVisitsByResident(HttpServletRequest request)
+	{
+		logger.info(" --- getting all pending visits --- ");
+		
+		ResponseDTO response = new ResponseDTO();
+		
+		try
+		{
+			String provider = request.getHeader("provider");
+			String tenantId = request.getHeader("tenant-id");
+			String userId = request.getHeader("user-id");
+			
+			visitBO.setCredentials(provider, tenantId, userId);
+			
+			response = visitBO.getAllPendingVisitsByResident();
+			
+			if (!response.getResult())
+		     {  	    		 
+		    	 logger.severe("failed to get all pending visits"); 
+		     	   
+		     	  throw new BadRequestException(response);	        
+		     }
+	   	 	else
+	   	 	{
+	   	 		return ResponseEntity.ok(response);
+	   	 	}
+		}
+		catch(BadRequestException e)
+		{
+			logger.info(" --- error : " + e.getResponse().getErrorMsg());
+			
+			response.setErrorMsg(e.getMessage());
+			response.setResponse(e.getResponse().getErrorMsg());
+			response.setResult(false);
+			//e.setErrorMsg(e.getResponse());			
+			return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+		}
+	}
+	
+	@GetMapping(value = "/approved-visits")
+	public ResponseEntity<?> getAllApprovedVisits(HttpServletRequest request)
+	{
+		logger.info(" --- getting all approved visits --- ");
+		
+		ResponseDTO response = new ResponseDTO();
+		
+		try
+		{
+			String provider = request.getHeader("provider");
+			String tenantId = request.getHeader("tenant-id");
+			String userId = request.getHeader("user-id");
+			
+			visitBO.setCredentials(provider, tenantId, userId);
+			
+			response = visitBO.getAllApprovedVisits();
+			
+			if (!response.getResult())
+		     {  	    		 
+		    	 logger.severe("failed to get all approved visits"); 
+		     	   
+		     	  throw new BadRequestException(response);	        
+		     }
+	   	 	else
+	   	 	{
+	   	 		return ResponseEntity.ok(response);
+	   	 	}
+		}
+		catch(BadRequestException e)
+		{
+			logger.info(" --- error : " + e.getResponse().getErrorMsg());
+			
+			response.setErrorMsg(e.getMessage());
+			response.setResponse(e.getResponse().getErrorMsg());
+			response.setResult(false);
+			//e.setErrorMsg(e.getResponse());			
+			return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+		}
+	}
+	
+	@GetMapping(value = "/approved-visits-by-resident")
+	public ResponseEntity<?> getAllApprovedVisitsByResident(HttpServletRequest request)
+	{
+		logger.info(" --- getting all approved visits --- ");
+		
+		ResponseDTO response = new ResponseDTO();
+		
+		try
+		{
+			String provider = request.getHeader("provider");
+			String tenantId = request.getHeader("tenant-id");
+			String userId = request.getHeader("user-id");
+			
+			visitBO.setCredentials(provider, tenantId, userId);
+			
+			response = visitBO.getAllApprovedVisitsByResident();
+			
+			if (!response.getResult())
+		     {  	    		 
+		    	 logger.severe("failed to get all approved visits"); 
+		     	   
+		     	  throw new BadRequestException(response);	        
+		     }
+	   	 	else
+	   	 	{
+	   	 		return ResponseEntity.ok(response);
+	   	 	}
+		}
+		catch(BadRequestException e)
+		{
+			logger.info(" --- error : " + e.getResponse().getErrorMsg());
+			
+			response.setErrorMsg(e.getMessage());
+			response.setResponse(e.getResponse().getErrorMsg());
+			response.setResult(false);
+			//e.setErrorMsg(e.getResponse());			
+			return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+		}
+	}
+	
+	@GetMapping(value = "/denied-visits")
+	public ResponseEntity<?> getAllDeniedVisits(HttpServletRequest request)
+	{
+		logger.info(" --- getting all denied visits --- ");
+		
+		ResponseDTO response = new ResponseDTO();
+		
+		try
+		{
+			String provider = request.getHeader("provider");
+			String tenantId = request.getHeader("tenant-id");
+			String userId = request.getHeader("user-id");
+			
+			visitBO.setCredentials(provider, tenantId, userId);
+			
+			response = visitBO.getAllDeniedVisits();
+			
+			if (!response.getResult())
+		     {  	    		 
+		    	 logger.severe("failed to get all denied visits"); 
+		     	   
+		     	  throw new BadRequestException(response);	        
+		     }
+	   	 	else
+	   	 	{
+	   	 		return ResponseEntity.ok(response);
+	   	 	}
+		}
+		catch(BadRequestException e)
+		{
+			logger.info(" --- error : " + e.getResponse().getErrorMsg());
+			
+			response.setErrorMsg(e.getMessage());
+			response.setResponse(e.getResponse().getErrorMsg());
+			response.setResult(false);
+			//e.setErrorMsg(e.getResponse());			
+			return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+		}
+	}
+	
+	@GetMapping(value = "/denied-visits-by-resident")
+	public ResponseEntity<?> getAllDeniedVisitsByResident(HttpServletRequest request)
+	{
+		logger.info(" --- getting all denied visits --- ");
+		
+		ResponseDTO response = new ResponseDTO();
+		
+		try
+		{
+			String provider = request.getHeader("provider");
+			String tenantId = request.getHeader("tenant-id");
+			String userId = request.getHeader("user-id");
+			
+			visitBO.setCredentials(provider, tenantId, userId);
+			
+			response = visitBO.getAllDeniedVisitsByResident();
+			
+			if (!response.getResult())
+		     {  	    		 
+		    	 logger.severe("failed to get all denied visits"); 
+		     	   
+		     	  throw new BadRequestException(response);	        
+		     }
+	   	 	else
+	   	 	{
+	   	 		return ResponseEntity.ok(response);
+	   	 	}
+		}
+		catch(BadRequestException e)
+		{
+			logger.info(" --- error : " + e.getResponse().getErrorMsg());
+			
+			response.setErrorMsg(e.getMessage());
+			response.setResponse(e.getResponse().getErrorMsg());
+			response.setResult(false);
+			//e.setErrorMsg(e.getResponse());			
+			return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+		}
+	}
+}

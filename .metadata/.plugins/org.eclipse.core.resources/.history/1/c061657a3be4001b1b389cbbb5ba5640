@@ -1,0 +1,87 @@
+package com.spacio.conn.test;
+
+import org.apache.logging.log4j.LogManager;
+import com.spacio.conn.dto.LoginCredential;
+import org.apache.logging.log4j.Logger;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.HttpEntity;
+import org.springframework.web.client.RestTemplate;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+import com.spacio.conn.bo.ConnBO;
+import com.spacio.conn.dto.ResponseDTO;
+
+@SpringBootTest
+public class ConnTest
+{
+	@Autowired
+	private ConnBO connBO;
+	
+	private static final Logger logger = LogManager.getLogger();
+	
+	@Autowired
+	private LoginCredential credential;
+	
+	//@Test
+	public void createUser()
+	{
+		String username = "benign41";
+		
+		String password = "crmpass433";
+		
+		boolean result = connBO.createUser(username, password);
+		
+		assertTrue(result, "result must be true");
+	}
+	
+	//@Test
+	public void populateOpencrxTables()
+	{
+		String username = "benign123";
+		
+		String password = "crmpass433";
+		
+		boolean result = connBO.populateOpencrxTables(username, password);
+		
+		assertTrue(result, "result must be true");
+	}
+
+	//@Test
+	public void setOpencrxFactoryData()
+	{
+		String username = "benign40";
+		
+		String password = "crmpass433";
+		
+		ResponseDTO response = connBO.setOpencrxFactoryData(username, password);
+		
+		assertNotNull(response, "response must not be null");
+		
+		assertTrue(response.getResult(), "result must be true");
+	}
+	
+	@Test
+	public void setDefaults()
+	{
+		RestTemplate template = new RestTemplate();
+		
+		final String uri = "http://localhost:8081/spacio/setDefaults";
+		
+		credential.setUsername("benign40");
+		credential.setPassword("crmpass433");
+		
+		HttpEntity<LoginCredential> request = new HttpEntity<>(credential);
+		
+		ResponseDTO response = template.postForObject(uri, request, ResponseDTO.class);
+		
+		assertNotNull(response, "response is not null");
+		
+		assertTrue(response.getResult(), "result must be true");
+		
+		logger.info("response is " + response.getResult());
+	}
+	
+}

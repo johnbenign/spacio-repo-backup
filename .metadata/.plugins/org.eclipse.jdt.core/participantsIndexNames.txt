@@ -1,0 +1,9 @@
+INDEX VERSION 1.131
+D:\workspaces\spacio_spring\.metadata\.plugins\org.eclipse.jst.jsp.core\jspsearch\2964852738.index
+\hello-app2\src\main\java
+D:\workspaces\spacio_spring\.metadata\.plugins\org.eclipse.jst.jsp.core\jspsearch\263740658.index
+\SpacioFMWeb\src\main\java
+D:\workspaces\spacio_spring\.metadata\.plugins\org.eclipse.jst.jsp.core\jspsearch\924769089.index
+\hello-app3\src\main\resources
+D:\workspaces\spacio_spring\.metadata\.plugins\org.eclipse.jst.jsp.core\jspsearch\3422830618.index
+\SpacioFMWeb\src\main\java

@@ -1,0 +1,135 @@
+package com.spacio.fm.core.home.dao.impl;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.logging.Logger;
+
+import org.opencrx.kernel.generic.SecurityKeys;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+import org.w3c.spi2.Datatypes;
+import org.w3c.spi2.Structures;
+
+import com.spacio.crx.dao.impl.GenericDAOImpl;
+import com.spacio.fm.core.account.dao.impl.EstateDAOImpl;
+import com.spacio.fm.core.bo.ConnectionManager;
+import com.spacio.fm.core.dto.ResponseDTO;
+import com.spacio.fm.core.home.dao.HomeDAO;
+import com.spacio.fm.core.home.dto.CreateUserDTO;
+import com.spacio.fm.core.util.SegmentUtil;
+import com.spacio.fm.home1.jmi1.CreateUserReturn;
+import com.spacio.fm.home1.jmi1.Segment;
+
+
+@Component("homeDAO")
+public class HomeDAOImpl extends GenericDAOImpl implements HomeDAO
+{
+
+	
+	@Autowired
+	private ConnectionManager conMgr;
+
+	@Autowired
+	private ResponseDTO response;
+
+    
+    private static final Logger logger = Logger.getLogger(EstateDAOImpl.class.getName());
+    
+	
+    
+    public HomeDAOImpl()
+    {
+    	super();
+    	
+    	logger.info("-- HomeDAOImpl() -- ");
+    }
+    
+	@Override
+	public ResponseDTO createUser(CreateUserDTO createUser)
+	{
+		ResponseDTO response = this.response;
+		
+		CreateUserReturn out = null;
+		
+		try
+		{
+			if(response == null)
+			{
+				throw new Exception("response object is null");
+			}
+			
+			String segmentName = createUser.getSegmentName();
+			
+			String adminPrincipal = SecurityKeys.ADMIN_PRINCIPAL + "-" + segmentName;
+			
+			pm = conMgr.getPersistenceManager(adminPrincipal);
+			
+			SegmentUtil segmentUtil = new SegmentUtil("CRX", segmentName);
+			
+			Segment fmHomeSegment = segmentUtil.getFMHomeSegment(pm);
+			
+			com.spacio.fm.home1.jmi1.CreateUserParam in = Structures.create(
+	        		com.spacio.fm.home1.jmi1.CreateUserParam.class,
+	        		Datatypes.member(com.spacio.fm.home1.jmi1.CreateUserParam.Member.adminPrincipalId, createUser.getPrincipalId()),
+	        		Datatypes.member(com.spacio.fm.home1.jmi1.CreateUserParam.Member.companyId, createUser.getCompanyXri()),
+	        		Datatypes.member(com.spacio.fm.home1.jmi1.CreateUserParam.Member.estateId, createUser.getEstateXri()),
+	        		Datatypes.member(com.spacio.fm.home1.jmi1.CreateUserParam.Member.role, createUser.getRole()),
+	        		Datatypes.member(com.spacio.fm.home1.jmi1.CreateUserParam.Member.segmentName, segmentName),
+	        		Datatypes.member(com.spacio.fm.home1.jmi1.CreateUserParam.Member.contact, 
+	        				Structures.create(
+	                				com.spacio.fm.home1.jmi1.ContactT.class,
+	                				Datatypes.member(com.spacio.fm.home1.jmi1.ContactT.Member.firstName, createUser.getFirstName()),
+	                				Datatypes.member(com.spacio.fm.home1.jmi1.ContactT.Member.lastName, createUser.getLastName()),
+	                				Datatypes.member(com.spacio.fm.home1.jmi1.ContactT.Member.email, createUser.getEmailAddress()),
+	                				Datatypes.member(com.spacio.fm.home1.jmi1.ContactT.Member.accountCategory, createUser.getAccountCategories()),
+	                				Datatypes.member(com.spacio.fm.home1.jmi1.ContactT.Member.telephone, createUser.getTelephone())
+	                				)
+	        				)
+	        		);
+			
+			out = fmHomeSegment.createFMUser2(in);
+			
+			if(out == null)
+	        {
+	        	logger.severe("CreateUserReturn object is null");
+	        	
+	        	throw new Exception("CreateUserReturn object is null");
+	        }
+	        
+	        if(out.getStatus().getReturnCode() == 0)
+	        {
+	        	response.setResult(true);
+	        	response.setResponse("fm user created successfully");
+	        }
+	        else
+	        {
+	            throw new Exception((out.getStatus().getReturnParams().get(0)));
+	        }
+		}
+		catch(Exception e)
+		{
+			e.printStackTrace();
+			
+			List<String> errors = new ArrayList<>();
+			
+			String error = e.getMessage();
+			
+<<<<<<< HEAD
+			logger.severe("error: " + error);
+			
+=======
+>>>>>>> branch 'nyemike' of https://john_benign@bitbucket.org/spaciosystems/spaciofmcore.git
+			errors.add(error);
+			
+			//out = createEstateErrorResponse(errors);
+		}
+		finally
+		{
+			if(!pm.isClosed())
+				pm.close();
+		}
+		
+		return response;
+	}
+
+}

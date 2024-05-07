@@ -1,0 +1,167 @@
+package com.spacio.fm.core.activity.bo.impl;
+
+import java.util.List;
+import java.util.logging.Logger;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+
+import com.spacio.crx.bo.impl.GenericBOImpl;
+import com.spacio.crx.dto.ResponseDTO;
+import com.spacio.fm.core.activity.bo.WorkOrderBO;
+import com.spacio.fm.core.activity.dao.WorkOrderDAO;
+import com.spacio.fm.core.activity.dao.WorkOrderMetricsDAO;
+import com.spacio.fm.core.activity.dto.CreateWorkOrderDTO;
+import com.spacio.fm.core.activity.dto.FollowUpDTO;
+import com.spacio.fm.core.activity.dto.WorkOrderDTO;
+import com.spacio.fm.core.activity.dto.WorkOrderFollowUpDTO;
+
+@Component
+public class WorkOrderBOImpl extends GenericBOImpl implements WorkOrderBO
+{
+	private static final Logger logger = Logger.getLogger(WorkOrderBOImpl.class.getName());
+		
+	@Autowired
+	private WorkOrderDAO workOrderDAO;
+	
+	@Autowired
+	private WorkOrderMetricsDAO metricsDAO;
+	
+	@Override
+	public ResponseDTO createWorkOrder(CreateWorkOrderDTO workOrder)
+	{
+		logger.info(" --- about to create work order --- ");
+		
+		workOrderDAO.setCredentials(providerName, segmentName, userId);
+				
+		ResponseDTO response = workOrderDAO.createWorkOrder(workOrder);
+		
+		return response;
+	}
+
+	@Override
+	public ResponseDTO getAllWorkOrders()
+	{
+		logger.info(" --- getting all work orders --- ");
+		
+		workOrderDAO.setCredentials(providerName, segmentName, userId);
+				
+		ResponseDTO response = workOrderDAO.getAllWorkOrders();
+		
+		return response;
+	}
+
+	@Override
+	public ResponseDTO getAllWorkOrders(int index, int range)
+	{
+		logger.info(" --- getting all work orders range --- ");
+		
+		workOrderDAO.setCredentials(providerName, segmentName, userId);
+				
+		ResponseDTO response = workOrderDAO.getAllWorkOrders(index, range);
+		
+		return response;
+	}
+
+	@Override
+	public int getAllWorkOrdersSize()
+	{
+		logger.info(" --- getting work order list size --- ");
+		
+		workOrderDAO.setCredentials(providerName, segmentName, userId);
+				
+		int count = workOrderDAO.getAllWorkOrdersSize();
+		
+		return count;
+	}
+
+	@Override
+	public ResponseDTO updateWorkOrder(WorkOrderDTO workOrder)
+	{
+		logger.info(" --- update work order --- ");
+		
+		workOrderDAO.setCredentials(providerName, segmentName, userId);
+				
+		ResponseDTO response = workOrderDAO.updateWorkOrder(workOrder);
+		
+		return response;
+	}
+
+	@Override
+	public ResponseDTO getWorkOrder(String workOrderId)
+	{
+		logger.info(" --- getting work order by id --- ");
+		
+		workOrderDAO.setCredentials(providerName, segmentName, userId);
+				
+		ResponseDTO response = workOrderDAO.getWorkOrder(workOrderId);
+		
+		return response;
+	}
+
+	@Override
+	public ResponseDTO doWorkOrderFollowUp(WorkOrderFollowUpDTO followUp)
+	{
+		logger.info(" --- about to do work order follow up --- ");
+		
+		workOrderDAO.setCredentials(providerName, segmentName, userId);
+		
+		ResponseDTO response = workOrderDAO.doWorkOrderFollowUp(followUp);
+		
+		return response;
+	}
+
+	@Override
+	public ResponseDTO createWorkOrderTasks(List<String> workOrderTasks, String workOrderXri)
+	{
+		logger.info(" about to create work order tasks");
+		
+		workOrderDAO.setCredentials(providerName, segmentName, userId);
+		
+		ResponseDTO response = workOrderDAO.createWorkOrderTasks(workOrderTasks, workOrderXri);
+		
+		return response;
+	}
+
+	@Override
+	public ResponseDTO doWorkOrderTasksFollowUp(FollowUpDTO followUp)
+	{
+		logger.info(" about to do work order task follow up");
+		
+		workOrderDAO.setCredentials(providerName, segmentName, userId);
+		
+		ResponseDTO response = workOrderDAO.doWorkOrderTasksFollowUp(followUp);
+		
+		return response;
+	}
+	
+	@Override
+	public ResponseDTO getAllActiveWorkOrders()
+	{		
+		metricsDAO.setCredentials(providerName, segmentName, userId);
+		
+		ResponseDTO response = metricsDAO.getAllActiveWorkOrders();
+		
+		return response;
+	}
+	
+	@Override
+	public ResponseDTO getAllCompletedWorkOrders()
+	{		
+		metricsDAO.setCredentials(providerName, segmentName, userId);
+		
+		ResponseDTO response = metricsDAO.getAllCompletedWorkOrders();
+		
+		return response;
+	}
+	
+	@Override
+	public ResponseDTO getAllSuspendedWorkOrders()
+	{		
+		metricsDAO.setCredentials(providerName, segmentName, userId);
+		
+		ResponseDTO response = metricsDAO.getAllSuspendedWorkOrders();
+		
+		return response;
+	}
+}

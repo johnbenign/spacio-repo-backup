@@ -1,0 +1,338 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<parent>
+		<groupId>org.springframework.boot</groupId>
+		<artifactId>spring-boot-starter-parent</artifactId>
+		<version>2.4.1</version>
+		<relativePath/> <!-- lookup parent from repository -->
+	</parent>
+	<groupId>com.spacio.crx</groupId>
+	<artifactId>CrxCustom</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+	<name>CrxCustom</name>
+	<description>Custom Crx Services</description>
+
+	<properties>
+		<java.version>1.8</java.version>
+		<project.basedir>D:/workspaces/spacio_spring/crxcustom/CrxCustom</project.basedir>
+
+	</properties>
+
+    <repositories>    
+    </repositories>
+    
+    <!-- DependencyManagement block -->
+
+<!--dependency management for oracle cloud ojdbc8 jars-->
+<dependencyManagement>
+  <dependencies>
+    <dependency>
+       <groupId>com.oracle.database.jdbc</groupId>
+       <artifactId>ojdbc-bom</artifactId>
+       <version>19.7.0.0</version>  
+       <!-- <version>18.3.0.0.0</version> --> 
+       <type>pom</type>
+       <scope>import</scope>
+     </dependency> 
+  </dependencies>
+</dependencyManagement>
+
+
+
+	<dependencies>
+		<dependency> 
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-devtools</artifactId>
+			<scope>runtime</scope>
+			<optional>true</optional>
+		</dependency>
+	<!-- 	<dependency>
+			<groupId>com.microsoft.sqlserver</groupId>
+			<artifactId>mssql-jdbc</artifactId>
+			<scope>runtime</scope>
+		</dependency>
+		-->
+		<!-- oracle cloud ojdbc8 jars -->
+		<dependency>
+           <groupId>com.oracle.database.jdbc</groupId>
+           <artifactId>ojdbc8</artifactId>
+        </dependency>
+		<dependency>
+           <groupId>openmdx-base</groupId>
+           <artifactId>openmdx-base</artifactId>
+           <version>2.1.5.7</version>
+         </dependency>
+         <dependency>
+           <groupId>openmdx-system</groupId>
+           <artifactId>openmdx-system</artifactId>
+           <version>2.1.5.7</version>
+         </dependency>
+         <dependency>
+           <groupId>openmdx-portal</groupId>
+           <artifactId>openmdx-portal</artifactId>
+           <version>2.1.5.7</version>
+         </dependency>
+         <!-- <dependency>
+           <groupId>osgi.enterprise.el</groupId>
+           <artifactId>osgi.enterprise.el</artifactId>
+           <version>2.1.5.7</version>
+         </dependency> -->
+         <dependency>
+           <groupId>osgi.enterprise</groupId>
+           <artifactId>osgi.enterprise</artifactId>
+           <version>2.1.5.7</version>
+         </dependency>
+         <!--
+         <dependency>
+           <groupId>osgi.enterprise.persistence</groupId>
+           <artifactId>osgi.enterprise.persistence</artifactId>
+           <version>2.1.5.7</version>
+         </dependency>
+          not required for the test class to work. besides it's causing problems in the secure web project. duplicate servlet context class 20201126
+           <dependency>
+           <groupId>osgi.enterprise.servlet</groupId>
+           <artifactId>osgi.enterprise.servlet</artifactId>
+           <version>2.1.5.7</version>
+         </dependency>
+        -->
+         <dependency>
+           <groupId>osgi.enterprise.transaction</groupId>
+           <artifactId>osgi.enterprise.transaction</artifactId>
+           <version>2.1.5.7</version>
+         </dependency>
+         <dependency>
+           <groupId>osgi.enterprise.xml</groupId>
+           <artifactId>osgi.enterprise.xml</artifactId>
+           <version>2.1.5.7</version>
+         </dependency>
+         <dependency>
+           <groupId>annotations</groupId>
+           <artifactId>annotations</artifactId>
+           <version>2.1.5.7</version>
+         </dependency>
+         <dependency>
+           <groupId>asm</groupId>
+           <artifactId>asm</artifactId>
+           <version>2.1.5.7</version>
+         </dependency>
+         <dependency>
+           <groupId>commons-collections</groupId>
+           <artifactId>commons-collections</artifactId>
+           <version>2.1.5.7</version>
+         </dependency>
+         <dependency>
+           <groupId>commons-lang</groupId>
+           <artifactId>commons-lang</artifactId>
+           <version>2.1.5.7</version>
+         </dependency>
+         <dependency>
+           <groupId>concurrent</groupId>
+           <artifactId>concurrent</artifactId>
+           <version>2.1.5.7</version>
+         </dependency>
+         <dependency>
+           <groupId>ejb</groupId>
+           <artifactId>ejb</artifactId>
+           <version>2.1.5.7</version>
+         </dependency>        
+         <dependency>
+           <groupId>hamcrest-core</groupId>
+           <artifactId>hamcrest-core</artifactId>
+           <version>2.1.5.7</version>
+         </dependency>
+         <dependency>
+           <groupId>javax.enterprise.deploy</groupId>
+           <artifactId>javax.enterprise.deploy</artifactId>
+           <version>2.1.5.7</version>
+         </dependency>
+         <dependency>
+           <groupId>jcache</groupId>
+           <artifactId>jcache</artifactId>
+           <version>2.1.5.7</version>
+         </dependency>
+         <dependency>
+           <groupId>jdo2-api</groupId>
+           <artifactId>jdo2-api</artifactId>
+           <version>2.1.5.7</version>
+         </dependency>
+         <dependency>
+           <groupId>mail</groupId>
+           <artifactId>mail</artifactId>
+           <version>2.1.5.7</version>
+         </dependency>
+         <dependency>
+           <groupId>netscape-ldap</groupId>
+           <artifactId>netscape-ldap</artifactId>
+           <version>2.1.5.7</version>
+         </dependency>
+         <dependency>
+           <groupId>openjpa</groupId>
+           <artifactId>openjpa</artifactId>
+           <version>2.1.5.7</version>
+         </dependency>
+         <dependency>
+           <groupId>resource</groupId>
+           <artifactId>resource</artifactId>
+           <version>2.1.5.7</version>
+         </dependency>
+         <dependency>
+           <groupId>serp</groupId>
+           <artifactId>serp</artifactId>
+           <version>2.1.5.7</version>
+         </dependency>         
+         <dependency>
+           <groupId>openmdx-authentication</groupId>
+           <artifactId>openmdx-authentication</artifactId>
+           <version>2.1.5.7</version>
+         </dependency>
+         <dependency>
+           <groupId>openmdx-ldap</groupId>
+           <artifactId>openmdx-ldap</artifactId>
+           <version>2.1.5.7</version>
+         </dependency>
+         <dependency>
+           <groupId>openmdx-pki</groupId>
+           <artifactId>openmdx-pki</artifactId>
+           <version>2.1.5.7</version>
+         </dependency>
+         <dependency>
+           <groupId>openmdx-radius</groupId>
+           <artifactId>openmdx-radius</artifactId>
+           <version>2.1.5.7</version>
+         </dependency>
+         <dependency>
+           <groupId>openmdx-resource</groupId>
+           <artifactId>openmdx-resource</artifactId>
+           <version>2.1.5.7</version>
+         </dependency>
+         <dependency>
+           <groupId>openmdx-security</groupId>
+           <artifactId>openmdx-security</artifactId>
+           <version>2.1.5.7</version>   
+         </dependency>
+         <dependency>
+           <groupId>opencrx-application</groupId>
+           <artifactId>opencrx-application</artifactId>
+           <version>4.1</version>
+         </dependency>
+
+        <!--  <dependency>
+           <groupId>opencrx-extension</groupId>
+           <artifactId>opencrx-extension</artifactId>
+           <version>4.1</version>
+
+         </dependency> -->
+         <dependency>
+           <groupId>opencrx-kernel</groupId>
+           <artifactId>opencrx-kernel</artifactId>
+           <version>4.1</version>
+         </dependency>
+         <dependency>
+           <groupId>opencrx-mail</groupId>
+           <artifactId>opencrx-mail</artifactId>
+           <version>4.1</version>
+         </dependency>
+         <dependency>
+           <groupId>opencrx-security</groupId>
+           <artifactId>opencrx-security</artifactId>
+           <version>4.1</version>
+         </dependency>
+         <dependency>
+           <groupId>opencrx-rsk-golden-server</groupId>
+           <artifactId>opencrx-rsk-golden-server</artifactId>
+           <version>4.1</version>   
+         </dependency>
+         
+         <dependency>
+		    <groupId>commons-io</groupId>
+		    <artifactId>commons-io</artifactId>
+		    <version>2.7</version>
+		</dependency>
+         
+         <dependency>
+           <groupId>sqljdbc4</groupId>
+           <artifactId>sqljdbc4</artifactId>
+           <version>4.1</version>
+         </dependency>
+
+         <dependency>
+		    <groupId>org.junit.jupiter</groupId>
+		    <artifactId>junit-jupiter-api</artifactId>
+		    <scope>test</scope>
+		</dependency>
+         
+         
+         <!-- <dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-data-jpa</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>com.microsoft.sqlserver</groupId>
+			<artifactId>mssql-jdbc</artifactId>
+			<scope>runtime</scope>
+		</dependency> -->
+        
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-test</artifactId>
+			<scope>test</scope>
+			<exclusions>
+				<exclusion>
+					<groupId>org.junit.vintage</groupId>
+					<artifactId>junit-vintage-engine</artifactId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+	</dependencies>
+
+	<build>
+		<plugins>
+			<!-- <plugin> this plug in creates fat jar
+				<groupId>org.springframework.boot</groupId>
+				<artifactId>spring-boot-maven-plugin</artifactId>
+			</plugin> 
+			<plugin>
+	            <groupId>org.apache.maven.plugins</groupId>
+	             <artifactId>maven-dependency-plugin</artifactId>
+	<executions>
+		<execution>
+			<id>copy-dependencies</id>
+			<phase>prepare-package</phase>
+			<goals>
+				<goal>copy-dependencies</goal>
+			</goals>
+			<configuration>
+				<outputDirectory>
+					${project.build.directory}/libs
+				</outputDirectory>
+			</configuration>
+		</execution>
+	</executions>
+</plugin>
+       <plugin>
+    <groupId>org.apache.maven.plugins</groupId>
+    <artifactId>maven-jar-plugin</artifactId>
+    <configuration>
+        <archive>
+            <manifest>
+                <addClasspath>true</addClasspath>
+                <classpathPrefix>libs/</classpathPrefix>
+                <mainClass>
+                    org.baeldung.executable.ExecutableMavenJar
+                </mainClass>
+            </manifest>
+        </archive>
+    </configuration>
+</plugin>
+-->
+		</plugins>
+	</build>
+
+</project>

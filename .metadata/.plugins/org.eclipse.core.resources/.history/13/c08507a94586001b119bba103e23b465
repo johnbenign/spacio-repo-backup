@@ -1,0 +1,689 @@
+package com.spacio.spring.scheduler.repository;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.InputStream;
+import java.net.URI;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.List;
+
+import javax.ws.rs.client.Client;
+import javax.ws.rs.client.ClientBuilder;
+import javax.ws.rs.client.Entity;
+import javax.ws.rs.client.Invocation;
+import javax.ws.rs.client.WebTarget;
+import javax.ws.rs.core.Form;
+import javax.ws.rs.core.Response;
+import javax.ws.rs.core.UriBuilder;
+
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.FilenameUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.apache.poi.hssf.usermodel.HSSFCell;
+import org.apache.poi.hssf.usermodel.HSSFRow;
+import org.apache.poi.hssf.usermodel.HSSFSheet;
+import org.apache.poi.hssf.usermodel.HSSFWorkbook;
+import org.glassfish.jersey.client.ClientConfig;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Repository;
+import com.spacio.spring.upload.dto.JobUploadDTO;
+import com.spacio.spring.upload.dto.JobUploadHistoryDTO;
+import com.spacio.spring.upload.dto.ResponseDTO;
+import com.spacio.spring.upload.repository.JobUploadHistoryRepository;
+import com.spacio.spring.upload.service.JobUploadService;
+import com.spacio.spring.upload.service.impl.JobUploadServiceImpl;
+import com.spacio.spring.upload.util.constant.JobUploadTypeUtil;
+
+
+@Repository
+public class JobUploadSchedulerRepository
+{
+	private static final Logger logger = LogManager.getLogger();
+	
+	@Autowired
+	private JobUploadService service;
+	
+	private static final int OK_STATUS = 200;
+	
+	private static final String XLS_EXTENSION = "xls";
+	
+	private static final String XLSX_EXTENSION = "xlsx";
+
+	private static final String XML_EXTENSION = ".xml";
+	
+	@Value("${output.path.file}")
+	private String outputFilePath;
+	
+	@Value("${input.path.file}")
+	private String inputFilePath;
+	
+	@Autowired
+	private JobUploadHistoryRepository historyRepository;
+	
+	@Autowired
+	private JobUploadHistoryDTO history;
+	
+	@Autowired
+	private ResponseDTO response;
+
+	private String fullOutputPath;
+	
+	public ResponseDTO process()
+	{	
+		try
+		{
+			List<JobUploadDTO> unprocessedJobs = getAllUnprocessedRecords();
+			
+			if(unprocessedJobs.isEmpty())
+			{
+				logger.info("all records have been processed!");
+				
+				response.setResult(true);
+				
+				response.setDescription("all records have been processed!");
+				
+				return response;
+			}
+			
+			for(JobUploadDTO job : unprocessedJobs)
+			{
+				transform(job);
+				
+				String segmentName = job.getSegmentName();
+				
+				logger.info(" --- the segment name is: " + segmentName + " yeeeeee --- ");
+				
+				Response webServiceResponse = uploadXml(fullOutputPath, segmentName);
+				
+				String message = webServiceResponse.readEntity(String.class);
+				
+				logger.info(response.toString());
+				
+				logger.info(" --- message: " + message);
+				
+				logger.info("web service status : " + webServiceResponse.getStatus());
+				
+				if(webServiceResponse.getStatus() != OK_STATUS)
+				{
+					response.setErrorMsg(message);
+					
+					return response;
+				}
+			}
+			
+//			unprocessedJobs.forEach(job -> 
+//			{
+//				transform(job);
+//				
+//				String segmentName = job.getSegmentName();
+//				
+//				logger.info(" --- the segment name is: " + segmentName + " yeeeeee --- ");
+//				
+//				Response webServiceResponse = uploadXml(fullOutputPath, segmentName);
+//				
+//				String message = webServiceResponse.readEntity(String.class);
+//				
+//				logger.info(response.toString());
+//				
+//				logger.info(" --- message: " + message);
+//				
+//				logger.info("web service status : " + webServiceResponse.getStatus());
+//				
+//				if(webServiceResponse.getStatus() != OK_STATUS)
+//				{
+//					response.setErrorMsg(message);
+//					
+//					return;
+//				}
+//				
+//				
+////				com.spacio.crx.dto.ResponseDTO crxResponse = xmlUploadService.upload(fullOutputPath, job.getSegmentName());
+////				
+////				if(crxResponse == null)
+////				{
+////					logger.info(" --- crx response is null --- ");
+////					
+////					response.setErrorMsg("crx response is null");
+////					
+////					return;
+////				}
+////				
+////				if(crxResponse.getErrorMsg() != null)
+////				{
+////					response.setErrorMsg(crxResponse.getErrorMsg());
+////					
+////					return;
+////				}
+//			}
+//			);
+			
+			response.setResult(true);
+			
+			response.setDescription("jobs processed successfully!");
+			
+		}
+		catch(Exception e)
+		{
+			logger.error("error: " + e.getMessage(), e);
+			
+			response.setErrorMsg(e.getMessage());
+			
+			response.setResponse(e);
+			
+			response.setResult(false);
+		}
+		
+		return response;
+	}
+	
+	private static URI getURI() {
+        return UriBuilder.fromUri("http://localhost:8081/xmlUploadWS/rest").build();
+    }
+	
+	private Response uploadXml(String fullOutputPath, String segmentName)
+	{
+		Form form = new Form();
+		
+		form.param("filePath", fullOutputPath);
+		form.param("segmentName", segmentName);
+		
+		ClientConfig config = new ClientConfig();
+		
+		Client client = ClientBuilder.newClient(config);
+		//WebClient n;
+		WebTarget target = client.target(getURI());
+
+		Invocation.Builder invocationBuilder;
+		
+		invocationBuilder = target.path("upload").request();
+		
+		Response response = invocationBuilder.post(Entity.form(form));
+		
+		return response;
+	}
+
+	private List<JobUploadDTO> getAllUnprocessedRecords()
+	{
+		List<JobUploadDTO> unprocessedJobs = service.getUnprocessedRecords();
+		
+		return unprocessedJobs;
+	}
+	
+	private void transform(JobUploadDTO unprocessedJob)
+	{
+		try
+		{
+			invokeTransformation(unprocessedJob);
+			
+			setAsProcessed(unprocessedJob);
+			
+			//Short uploadType = unprocessedJob.getUploadType();
+			
+//			if(uploadType.equals(JobUploadTypeUtil.CONTACT_UPLOAD))
+//			{
+//				//invokeContactTransformation
+//				
+//				logger.info("initiating contact upload!");
+//				
+//				
+//				
+//				//invokeTestTransformation(unprocessedJob);
+//				
+//				
+//			}
+//			else if(uploadType.equals(JobUploadTypeUtil.COMPANY_UPLOAD))
+//			{
+//				//invokeContactTransformation
+//			}
+//			else if(uploadType.equals(JobUploadTypeUtil.INVENTORY_UPLOAD))
+//			{
+//				logger.info("initiating inventory upload!");
+//				
+//				invokeInventoryTransformation(unprocessedJob);
+//				
+//				setAsProcessed(unprocessedJob);
+//			}
+//			else if(uploadType.equals(JobUploadTypeUtil.BUILDING_UPLOAD))
+//			{
+//				logger.info("initiating building upload!");
+//				
+//				invokeBuildingTransformation(unprocessedJob);
+//				
+//				setAsProcessed(unprocessedJob);
+//			}
+//			else
+//			{
+//				logger.info("no match so routing to default!");
+//				
+//				//invokeTestTransformation(unprocessedJob);
+//			}
+			
+		}
+		catch(Exception e)
+		{
+			logger.error("error: " + e.getMessage(), e);
+			
+			response.setErrorMsg(e.getMessage());
+			
+			response.setResponse(e);
+			
+			response.setResult(false);
+			
+		}
+	}
+
+	private void invokeBuildingTransformation(JobUploadDTO unprocessedJob) throws Exception
+	{
+		logger.info(" --- about to transform excel to xml for building --- ");
+		
+		logger.info("input file name: " + unprocessedJob.getFileName());
+		
+		File inputFile = new File(unprocessedJob.getFileName());
+		
+		logger.info(" --- write bytes into a file --- ");
+				
+		Path filePath = Files.write(inputFile.toPath(), unprocessedJob.getFileContent());
+		
+		logger.info(" --- init output file --- ");
+		
+		String baseName = FilenameUtils.getBaseName(unprocessedJob.getFileName());
+		
+		fullOutputPath = outputFilePath + baseName + XML_EXTENSION;
+		
+		File outputFile = new File(fullOutputPath);
+		
+		//org.apache.commons.io.FileUtils.writeByteArrayToFile(inputFile, unprocessedJob.getFileContent(), 0, unprocessedJob.getByteRead());/*I am not using this approach bcos it requires the number of bytes read*/
+		
+		logger.info(" --- intit the context array --- ");
+		
+		
+	
+		logger.info(" ---- finally run the job --- ");
+		
+		String fileExtension = FilenameUtils.getExtension(unprocessedJob.getFileName());
+		
+		if(fileExtension.equalsIgnoreCase(XLS_EXTENSION))
+		{
+			transformInventoryXLS(filePath, outputFile, unprocessedJob);
+		}
+		else if(fileExtension.equalsIgnoreCase(XLSX_EXTENSION))
+		{
+			//transformXLSX(filePath, outputFile, unprocessedJob);
+		}
+		else
+		{
+			logger.error(" --- invalid file extension --- ");
+			
+			throw new Exception("invalid file extension!");
+		}
+		
+		
+		
+		boolean isDeleted = inputFile.delete();
+		
+		if(isDeleted)
+		{
+			logger.info("generated file deleted!");
+		}
+		else
+		{
+			logger.info(" --- ubable to delete file --- ");
+			
+			response.setErrorMsg("could not delete file!");
+		}
+		
+		logger.info(" --- close resources --- ");
+		
+		//inputStream.close();
+		//workbook.close();
+		logger.info("succesfully converted from excel to xml!");
+	}
+
+	private void invokeInventoryTransformation(JobUploadDTO unprocessedJob) throws Exception
+	{
+		logger.info(" --- about to transform excel to xml for inventory item --- ");
+		
+		logger.info("input file name: " + unprocessedJob.getFileName());
+		
+		File inputFile = new File(unprocessedJob.getFileName());
+		
+		logger.info(" --- write bytes into a file --- ");
+				
+		Path filePath = Files.write(inputFile.toPath(), unprocessedJob.getFileContent());
+		
+		logger.info(" --- init output file --- ");
+		
+		String baseName = FilenameUtils.getBaseName(unprocessedJob.getFileName());
+		
+		fullOutputPath = outputFilePath + baseName + XML_EXTENSION;
+		
+		File outputFile = new File(fullOutputPath);
+		
+		//org.apache.commons.io.FileUtils.writeByteArrayToFile(inputFile, unprocessedJob.getFileContent(), 0, unprocessedJob.getByteRead());/*I am not using this approach bcos it requires the number of bytes read*/
+		
+		logger.info(" --- intit the context array --- ");
+		
+		
+	
+		logger.info(" ---- finally run the job --- ");
+		
+		String fileExtension = FilenameUtils.getExtension(unprocessedJob.getFileName());
+		
+		if(fileExtension.equalsIgnoreCase(XLS_EXTENSION))
+		{
+			transformInventoryXLS(filePath, outputFile, unprocessedJob);
+		}
+		else if(fileExtension.equalsIgnoreCase(XLSX_EXTENSION))
+		{
+			//transformXLSX(filePath, outputFile, unprocessedJob);
+		}
+		else
+		{
+			logger.error(" --- invalid file extension --- ");
+			
+			throw new Exception("invalid file extension!");
+		}
+		
+		
+		
+		boolean isDeleted = inputFile.delete();
+		
+		if(isDeleted)
+		{
+			logger.info("generated file deleted!");
+		}
+		else
+		{
+			logger.info(" --- ubable to delete file --- ");
+			
+			response.setErrorMsg("could not delete file!");
+		}
+		
+		logger.info(" --- close resources --- ");
+		
+		//inputStream.close();
+		//workbook.close();
+		logger.info("succesfully converted from excel to xml!");
+	}
+
+	private void transformInventoryXLS(Path filePath, File outputFile, JobUploadDTO unprocessedJob)
+	{
+		logger.info(" --- it is an xls file --- ");
+		
+		String[] context = new String[] {"--context_param inventory_input_excel=" + filePath.toFile(),
+				"--context_param inventory_output_xml=" + outputFile,
+				"--context_param providerName=" + unprocessedJob.getProviderName(),
+				"--context_param segmentName=" + unprocessedJob.getSegmentName()};
+		
+		spacio.inventory_job_0_1.Inventory_Job inventoryJob = new spacio.inventory_job_0_1.Inventory_Job();
+		
+		String[][] bufferValue = inventoryJob.runJob(context);
+		
+		logger.info("the exit code is : " + bufferValue[0][0]);
+	}
+
+	private void invokeTransformation(JobUploadDTO unprocessedJob) throws Exception
+	{
+		logger.info(" --- about to transform excel to xml --- ");
+		
+		logger.info("input file name: " + unprocessedJob.getFileName());
+		
+		File inputFile = new File(unprocessedJob.getFileName());
+				
+		//File file = new File("C:\\Users\\DELL\\Desktop\\spaciojobs\\excelformat.xls");
+				
+		//InputStream inputStream = new FileInputStream(inputFile);
+		
+		//HSSFWorkbook workbook = new HSSFWorkbook(inputStream);
+		
+		logger.info(" --- write bytes into a file --- ");
+		
+		//
+		
+		Path filePath = Files.write(inputFile.toPath(), unprocessedJob.getFileContent());
+		
+		InputStream inputStream = FileUtils.openInputStream(inputFile);
+				
+		HSSFWorkbook workbook = new HSSFWorkbook(inputStream);
+		
+		//HSSFSheet sheet = workbook.getSheet("Sheet1");
+		
+		HSSFSheet sheet = workbook.getSheetAt(0);
+		
+		if(sheet == null)
+		{
+			logger.info(" --- sheet is null --- ");
+		}
+		else
+		{
+			logger.info(" --- sheet is not null : " + sheet.getLastRowNum());
+			
+			removeEmptyRows(sheet);
+		}
+		
+		logger.info(" --- init output file --- ");
+		
+		String baseName = FilenameUtils.getBaseName(unprocessedJob.getFileName());
+		
+		fullOutputPath = outputFilePath + baseName + XML_EXTENSION;
+		
+		File outputFile = new File(fullOutputPath);
+		
+		//org.apache.commons.io.FileUtils.writeByteArrayToFile(inputFile, unprocessedJob.getFileContent(), 0, unprocessedJob.getByteRead());/*I am not using this approach bcos it requires the number of bytes read*/
+		
+		logger.info(" --- intit the context array --- ");
+		
+		
+	
+		logger.info(" ---- finally run the job --- ");
+		
+		Short uploadType = unprocessedJob.getUploadType();
+		
+		if(uploadType.equals(JobUploadTypeUtil.CONTACT_UPLOAD))
+		{			
+			logger.info("initiating contact upload!");
+			
+			transformContactXLS(filePath, outputFile, unprocessedJob);
+		}
+		else if(uploadType.equals(JobUploadTypeUtil.COMPANY_UPLOAD))
+		{
+			//invokeContactTransformation
+		}
+		else if(uploadType.equals(JobUploadTypeUtil.INVENTORY_UPLOAD))
+		{
+			logger.info("initiating inventory upload!");
+			
+			transformInventoryXLS(filePath, outputFile, unprocessedJob);
+			
+			setAsProcessed(unprocessedJob);
+		}
+		else if(uploadType.equals(JobUploadTypeUtil.BUILDING_UPLOAD))
+		{
+			logger.info("initiating building upload!");
+			
+			//transformBuildingXLS(unprocessedJob);
+			
+			setAsProcessed(unprocessedJob);
+		}
+		else
+		{
+			logger.info("no match so routing to default!");
+			
+			//invokeTestTransformation(unprocessedJob);
+		}
+		String fileExtension = FilenameUtils.getExtension(unprocessedJob.getFileName());
+		
+//		if(fileExtension.equalsIgnoreCase(XLS_EXTENSION))
+//		{
+//			
+//		}
+////		else if(fileExtension.equalsIgnoreCase(XLSX_EXTENSION))
+////		{
+////			//transformXLSX(filePath, outputFile, unprocessedJob);
+////		}
+//		else
+//		{
+//			logger.error(" --- invalid file extension --- ");
+//			
+//			throw new Exception("invalid file extension!");
+//		}
+		
+		
+		
+//		boolean isDeleted = inputFile.delete();
+//		
+//		if(isDeleted)
+//		{
+//			logger.info("generated file deleted!");
+//		}
+//		else
+//		{
+//			logger.info(" --- ubable to delete file --- ");
+//			
+//			response.setErrorMsg("could not delete file!");
+//		}
+		
+		logger.info(" --- close resources --- ");
+		
+		//inputStream.close();
+		//workbook.close();
+		logger.info("succesfully converted from excel to xml!");
+		
+	}
+
+//	private void transformXLSX(Path inputPath, File outputFile, JobUploadDTO unprocessedJob)
+//	{
+//		logger.info(" --- it is an xlsx file --- ");
+//		
+//		String[] context = new String[] {"--context_param inputFilePath=" + inputPath.toFile(),
+//				"--context_param outputFilePath=" + outputFile,
+//				"--context_param providerName=" + unprocessedJob.getProviderName(),
+//				"--context_param segmentName=" + unprocessedJob.getSegmentName()};
+//		
+//		spacio_works.contact_job_0_1.Contact_Job contactJob = new spacio_works.contact_job_0_1.Contact_Job();
+//		
+//		String[][] bufferValue = contactJob.runJob(context);
+//		
+//		logger.info("the exit code is : " + bufferValue[0][0]);
+//	}
+
+	private void removeEmptyRows(HSSFSheet sheet)
+	{
+		while(sheet.rowIterator().hasNext())
+		{
+			HSSFRow row = (HSSFRow) sheet.rowIterator().next();
+			
+			if(row == null)
+			{
+				sheet.removeRow(row);
+			}
+		}
+	}
+
+	private void transformContactXLS(Path inputPath, File outputFile, JobUploadDTO unprocessedJob)
+	{
+		logger.info(" --- it is an xls file --- ");
+		
+		String[] context = new String[] {"--context_param excelFormatFile=" + inputPath.toFile(),
+				"--context_param outputXmlFile=" + outputFile,
+				"--context_param providerName=" + unprocessedJob.getProviderName(),
+				"--context_param segmentName=" + unprocessedJob.getSegmentName()};
+		
+		spacio.contact_job_0_1.Contact_Job contactJob = new spacio.contact_job_0_1.Contact_Job();
+		
+		String[][] bufferValue = contactJob.runJob(context);
+		
+		logger.info("the exit code is : " + bufferValue[0][0]);
+	}
+
+	private void setAsProcessed(JobUploadDTO unprocessedJob)
+	{
+		unprocessedJob.setProcessed(true);
+		
+		service.save(unprocessedJob);
+		
+		logger.info("record has been marked as processed!");
+	}
+
+	/*
+	 * private void invokeTestTransformation(JobUploadDTO unprocessedJob) throws
+	 * IOException { FIRST_JOB firstJob = new FIRST_JOB();
+	 * 
+	 * File inputFile = new File(unprocessedJob.getFileName());
+	 * 
+	 * File productPass_Output = new File("");
+	 * 
+	 * org.apache.commons.io.FileUtils.writeByteArrayToFile(inputFile,
+	 * unprocessedJob.getFileContent(), 0, unprocessedJob.getByteRead());
+	 * 
+	 * String[] context = new String[] {"--context_param productInputFile=" +
+	 * inputFile, "--context_param productPassInputFile=" + productPass_Output};
+	 * 
+	 * firstJob.runJob(context); }
+	 */
+	
+	public ResponseDTO moveJobUploadToJobUploadHistory()
+	{
+		try
+		{
+			List<JobUploadDTO> jobUploads = service.getAllJobUpload();
+			
+			if(jobUploads.isEmpty())
+			{
+				logger.info("no records in the job upload table!");
+				
+				response.setDescription("no records in the job upload table!");
+				
+				response.setResult(true);
+				
+				return response;
+			}
+			
+			jobUploads.forEach(jobUpload ->
+			{
+				mapJobUploadToHistory(jobUpload);
+				
+				historyRepository.save(history);
+			});
+			
+			service.deleteAllJobUploadRecords();
+			
+			response.setResult(true);
+			
+			response.setDescription("jobs moved successfully!");
+		}
+		catch(Exception e)
+		{
+			logger.error("error: " + e.getMessage(), e);
+			
+			response.setErrorMsg(e.getMessage());
+			
+			response.setResponse(e);
+			
+			response.setResult(false);
+		}
+		
+		return response;
+	}
+
+	private void mapJobUploadToHistory(JobUploadDTO jobUpload)
+	{
+		history.setByteRead(jobUpload.getByteRead());
+		history.setEndDate(jobUpload.getEndDate());
+		history.setFileContent(jobUpload.getFileContent());
+		history.setFileName(jobUpload.getFileName());
+		history.setJobDescription(jobUpload.getJobDescription());
+		history.setJobId(jobUpload.getJobId());
+		history.setProcessed(jobUpload.isProcessed());
+		history.setProviderName(jobUpload.getProviderName());
+		history.setSegmentAdminPassword(jobUpload.getSegmentAdminPassword());
+		history.setSegmentAdminUser(jobUpload.getSegmentAdminUser());
+		history.setSegmentName(jobUpload.getSegmentName());
+		history.setStartDate(jobUpload.getStartDate());
+		history.setStatus(jobUpload.getStatus());
+		history.setUploadType(jobUpload.getUploadType());
+	}
+}

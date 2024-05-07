@@ -1,0 +1,205 @@
+package com.spacio.crx.test;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+import java.util.Collections;
+import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+import javax.jdo.PersistenceManager;
+import javax.jdo.PersistenceManagerFactory;
+import javax.naming.spi.NamingManager;
+
+import org.junit.jupiter.api.Test;
+import org.opencrx.kernel.utils.Utils;
+import org.openmdx.kernel.lightweight.naming.NonManagedInitialContextFactoryBuilder;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Scope;
+
+import com.spacio.crx.bo.UserHome;
+import com.spacio.crx.dto.LogInResultDTO;
+import com.spacio.crx.dto.RoleDTO;
+
+@SpringBootTest
+class TestUserHome {
+
+	private static final Logger logger = Logger.getLogger(TestUserHome.class.getName());
+
+	@Autowired	
+	UserHome userHome;
+	
+	
+	
+	
+	@TestConfiguration
+    static class PMFConfiguration 
+    {
+ 
+//		@Value("${db.url}")
+//		private String dbUrl;
+//		
+//		private String userId = "Root";      //
+//		
+//		
+//		@Bean("pmf")
+//		@Scope(value = "singleton")
+//		public PersistenceManagerFactory producePersistenceManagerFactory()
+//		{
+//
+//			logger.info(" -------- producePersistenceManagerFactory ------- ");
+//			
+//			initContextFactory(dbUrl);
+//
+//			PersistenceManagerFactory pmf = initPMF();
+//			
+//			// userId
+//			
+//			logger.info(" attempt getting pm ...");
+//			
+//			  PersistenceManager pm =  pmf.getPersistenceManager(userId, null);
+//			  
+//			  if (pm != null)
+//			  {
+//				 logger.info(" pm obtained !!! okay then close pm..."); 
+//				 
+//				  pm.close();
+//				  
+//				  logger.severe(" pm closed !! ");
+//			  }
+//			  else
+//				  logger.severe(" pm not obtained !!! ");
+//			  
+//
+//			
+//			  
+//			return pmf;
+//		}
+//		
+//		
+//		public PersistenceManagerFactory initPMF()
+//		{
+//
+//			logger.info(" -------- initPMF ------- ");
+//
+//			PersistenceManagerFactory pmf = null;
+//
+//			try {
+//
+//				// initContextFactory(dbUrl);
+//
+//				pmf = Utils.getPersistenceManagerFactory();
+//
+//				
+//				
+//				logger.info(" is pmf null ? ");
+//				
+//				if (pmf != null)
+//				{
+//					logger.info(" no it is not null.  ");
+//					
+//					logger.info(" pmf initialised locally  !");
+//				}
+//				else
+//				{
+//					logger.info(" is pmf null oh !!! ");
+//				}
+//
+//			} catch (Exception e) {
+//
+//				logger.severe(" error: " + e.getMessage());
+//
+//				logger.log(Level.SEVERE, " error initialising local pmf ! ", e);
+//
+//				// new ServiceException(e).log();
+//			}
+//
+//			return pmf;
+//		}
+//
+//		
+//		
+//		 public void initContextFactory(String dbUrl) 
+//		 {
+//			  
+//			  logger.info(" -----  initContextFactory ------ ");
+//			  
+//			  logger.info(" db url: " + dbUrl);
+//			  
+//			  try {
+//			  
+//			  logger.info(" inside initContextFactory() ---");
+//			  
+//			  
+//			  if (!NamingManager.hasInitialContextFactoryBuilder())
+//			  {
+//			  
+//			  logger.info("---init non managed init context .... ---- ");
+//			  
+//			  
+//			  
+//			  
+//			  // local
+//			  
+//			  NonManagedInitialContextFactoryBuilder.install( Collections.singletonMap(
+//			  "org.openmdx.comp.env.jdbc_opencrx_CRX", dbUrl ) );
+//			  
+//			  
+//			  logger.info(" context has been initialised !");
+//			  
+//			  
+//				/*
+//				 * // remote amzaon NonManagedInitialContextFactoryBuilder.install(
+//				 * Collections.singletonMap( "org.openmdx.comp.env.jdbc_opencrx_CRX",
+//				 * "jdbc:sqlserver:\\/\\/spaciofm.cvjywuu0shvj.us-west-2.rds.amazonaws.com:1433;databaseName=spacio_fm2;selectMethod=cursor?user=crmuser&password=crmpass433&driver=com.microsoft.sqlserver.jdbc.SQLServerDriver"
+//				 * );
+//				 */
+//			  
+//			  } else { logger.info(" context has already been initialised !!! "); }
+//			  
+//			  } catch (Exception ex) {
+//			  
+//			  logger.severe(" error message: " + ex.getMessage());
+//			  
+//			  ex.printStackTrace();
+//			  
+//			  }
+//			  
+//			  
+//			  }
+//		
+		
+		
+    }
+	
+	
+	@Test
+	public void logIn()
+	{
+		//fail("Not yet implemented");
+		
+		LogInResultDTO logInResult = userHome.logIn("GUNNARO11111", "BjXewO3");
+		
+		List<RoleDTO> roles = logInResult.getRoles();
+		
+		logger.info(" role size: " + roles.size());
+		
+		
+		for (RoleDTO role : roles)
+		{
+			logger.info(" role: " + role.getName());
+			logger.info(" xri: " + role.getUri());
+		}
+		
+		
+		 assertNotNull(logInResult);
+	}
+	
+	
+	
+
+}

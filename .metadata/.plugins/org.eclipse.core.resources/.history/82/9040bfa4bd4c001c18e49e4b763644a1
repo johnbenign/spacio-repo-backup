@@ -1,0 +1,354 @@
+package com.spacio.crx.bo.impl;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.logging.Logger;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+
+import com.spacio.crx.bo.Security2BO;
+
+import com.spacio.crx.dao.SecurityDAO;
+import com.spacio.crx.dto.MenuItem2DTO;
+import com.spacio.crx.dto.RoleDTO;
+import com.spacio.crx.dto.UserDTO;
+
+/**
+ *  a clone of SecurityBOImpl. It uses menuItem2DTO which has fewer fields
+ *  for royale project.
+ * @author nyemi
+ *
+ */
+@Component("security2BO")
+public class Security2BOImpl implements Security2BO 
+{
+
+	private static final Logger logger = Logger.getLogger(Security2BOImpl.class.getName());
+	
+    
+    
+    private List<MenuItem2DTO> menuList;
+    
+    private Map<String, MenuItem2DTO> menuMap;
+    private List<MenuItem2DTO> authorizedMenuList;
+    
+    
+    @Autowired
+    private SecurityDAO securityDAO;
+    
+    
+    public Security2BOImpl()
+    {
+    
+    	logger.fine("----- Security2BOImpl ----- ");
+    	
+       authorizedMenuList = new ArrayList<MenuItem2DTO>();
+    
+       menuMap = new HashMap<String, MenuItem2DTO>();
+     
+       menuList = new ArrayList<MenuItem2DTO>();    
+     
+    }
+	
+    
+    /***
+     *  returns list of menu's sorted hierarchically. suited for use 
+     *  in a tree ui.
+     */
+	@Override
+	public List<MenuItem2DTO> getRoleMenus(UserDTO user) 
+	{
+		// TODO Auto-generated method stub
+		
+		logger.info("  ------ get role menus  --------");
+		
+		  List<MenuItem2DTO> roleMenus = null;
+		  
+		  if (user.getUserRoles() == null)
+		  {
+			  logger.info("no configured roles for this user ");
+			  
+			  roleMenus = new ArrayList<MenuItem2DTO>();
+			  
+			  return roleMenus;
+		  }
+		  
+		  
+		  if (user.getUserRoles().size() == 0)
+		  {
+			  logger.info("no configured roles for this user ");
+			  
+              roleMenus = new ArrayList<MenuItem2DTO>();
+			  
+			  return roleMenus;
+		  }
+		  
+	        RoleDTO role = user.getUserRoles().get(0);
+	        
+	        logger.info(" fetch menu's for the role: " + role.getName());
+	       
+	        
+	      //  SecurityDAO securityDAO = new SecurityDAO();
+	       securityDAO.setUserId(user.getUserId());
+	       securityDAO.setSegmentName(user.getSegmentName());
+	       
+	        roleMenus = securityDAO.getRoleMenus2(role);
+	        
+	        
+	        reinitializeAuthorizedMenuList(roleMenus);
+	        
+	        reconstructHierarchicalMenuList(authorizedMenuList);
+	        
+	        	        
+	        
+	        
+	        logger.info("  ------ end of get role menu  --------");
+	        
+	        logger.info(" menu list size: " + menuList.size());
+	        
+		
+	     return menuList;
+	}
+	
+	
+	
+	
+    private void reinitializeAuthorizedMenuList(List<MenuItem2DTO> menuList) 
+    {
+        
+        logger.fine(" ----- reinitializeAuthorizedMenuList ----");
+        
+       
+        if (menuList == null)
+        {
+            return;
+        }
+        
+        
+        for (MenuItem2DTO menu : menuList) 
+        {
+            
+            logger.fine(" menu description: " + menu.getDescription());
+           
+            
+            
+          //  if (isAccessible(menu.getDefinition()))
+            if (isAccessible(menu.getDescription()))
+            {
+                
+                
+                authorizedMenuList.add(menu);
+                
+                logger.fine(" menu added !");
+            } 
+            else 
+            {
+                logger.fine(" re intialise authorized menu list again . .");
+                
+                reinitializeAuthorizedMenuList(menu.getChildrenMenuList());
+            }
+            
+        }
+        
+        
+    }
+    
+    
+    
+    private boolean isAccessible(String description) 
+    {
+        
+        logger.fine( " ------  isAccessible -----");
+        
+        logger.fine(" definition: " + description);
+        
+        
+        return (isRegionViewable(description) ||
+                isTaskFlowViewable(description));
+        
+        
+    }
+    
+    
+    private boolean isRegionViewable(String pageDef)
+    {
+      
+        logger.fine( " ------  isRegionViewable -----");
+        
+        logger.fine(" pageDef: " + pageDef);
+        
+      
+		/*
+		 * if (pageDef == null) { return false; }
+		 */
+        
+        logger.fine(" defaulting to true !");
+        
+        /*   
+        RegionPermission permission =
+            new RegionPermission(pageDef, RegionPermission.VIEW_ACTION);
+        SecurityContext ctx = ADFContext.getCurrent().getSecurityContext();
+      
+      
+        return ctx.hasPermission(permission);
+         */
+        return true;
+    }
+    
+    
+    //this is the Java version of the "#{securityContext.taskFlowViewable['taskFlowId']}" EL Expression
+    private boolean isTaskFlowViewable(String taskflowId) 
+    {
+        
+        
+       logger.fine( " ------  isTaskFlowViewable -----");
+       
+        logger.fine(" taskflowId: " + taskflowId);
+        
+        
+		/*
+		 * if (taskflowId == null) { return false; }
+		 */
+        logger.fine(" defaulting to true !");
+        
+        /*   
+        TaskFlowPermission permission =
+            new TaskFlowPermission(taskflowId, TaskFlowPermission.VIEW_ACTION);
+       
+       
+        SecurityContext ctx = ADFContext.getCurrent().getSecurityContext();
+      
+      
+        return ctx.hasPermission(permission); */
+        
+        return true;
+    }
+
+    
+    private void reconstructHierarchicalMenuList(List<MenuItem2DTO> authorizedMenuList)
+    {
+       
+        logger.fine("  ----- reconstructHierarchicalMenuList ------");
+       
+       
+        for (MenuItem2DTO menu : authorizedMenuList)
+        {
+            MenuItem2DTO copy = copyAttributes(menu);
+            reconstructHierarchy(copy);
+        }
+        
+        
+    }
+
+
+
+    private MenuItem2DTO copyAttributes(MenuItem2DTO menu)
+    {
+        
+        logger.fine(" ------- copyAttributes -------- ");
+        
+        
+        if (menu == null) 
+        {
+            return null;
+        }
+        
+        
+        MenuItem2DTO copy = new MenuItem2DTO();
+        
+       // copy.setId(menu.getId());
+        copy.setDescription(menu.getDescription());
+        //copy.setDefinition(menu.getDefinition());
+        copy.setParentMenu(menu.getParentMenu());
+        copy.setDisplaySeq(menu.getDisplaySeq());
+        copy.setUri(menu.getUri());
+        copy.setParentMenuXri(menu.getParentMenuXri());
+        copy.setChild(menu.getChild());
+        
+        
+        return copy;
+    }
+    
+    
+    
+    private void reconstructHierarchy(MenuItem2DTO menu)
+    {
+        
+        logger.fine("  ----- reconstructHierarchy ------");
+        
+        if (menu == null) 
+        {
+            return;
+        }
+        
+        
+       //            if (menuMap.containsKey(menu.getId()))            
+        if (menuMap.containsKey(menu.getUri())) 
+        { //menu already loaded
+            
+         logger.fine("menu already loaded");
+        
+            return;
+        }
+        
+        
+        
+      //  menuMap.put(new Long(menu.getId()), menu);
+        menuMap.put(menu.getUri(), menu);
+        
+        
+        MenuItem2DTO m = menu.getParentMenu();
+        
+        
+        if (m == null) 
+        {               
+            logger.fine(" no parent menu");
+            
+            menuList.add(menu);
+            
+            return;
+        }
+        
+        MenuItem2DTO parentCopy = null;
+        
+        logger.fine(" there are parent menus process further . .");
+        
+        if (menuMap.containsKey(m.getUri()))
+        {
+            
+            parentCopy = menuMap.get(m.getUri());               
+        } 
+        else 
+        {
+            parentCopy = copyAttributes(m);
+            
+            reconstructHierarchy(parentCopy);
+            
+        }           
+        
+        parentCopy.addMenu(menu);
+    }
+
+
+	@Override
+	public List<MenuItem2DTO> getRoleMenus2(String segmentName, String userId, RoleDTO roleDTO)
+	{
+		// TODO Auto-generated method stub
+		
+		logger.info("  ------ get role menus  --------");		
+		  
+		   securityDAO.setUserId(userId);
+	       securityDAO.setSegmentName(segmentName);
+				
+	       List<MenuItem2DTO> roleMenus = securityDAO.getRoleMenus2(roleDTO);
+		 	       
+		return roleMenus;
+	}
+
+
+    
+	
+}

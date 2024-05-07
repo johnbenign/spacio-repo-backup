@@ -1,0 +1,294 @@
+package com.spacio.fm.core.account;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+import javax.jdo.PersistenceManagerFactory;
+import javax.naming.spi.NamingManager;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.opencrx.kernel.utils.Utils;
+import org.openmdx.kernel.lightweight.naming.NonManagedInitialContextFactoryBuilder;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Scope;
+
+import com.spacio.crx.dto.QueryBean;
+import com.spacio.fm.core.account.bo.EstateBO;
+import com.spacio.fm.core.account.dto.EstateDTO;
+import com.spacio.fm.core.dto.ResponseDTO;
+
+
+@SpringBootTest
+class TestEstate {
+
+	private static final Logger logger = Logger.getLogger(TestEstate.class.getName());
+	
+	@Value("${dev.provider}")
+	private String provider;
+	
+	@Autowired
+	private EstateBO estateBO;
+	
+	
+	//@TestConfiguration
+    static class PMFConfiguration 
+    {
+ 
+		@Value("${db.url}")
+		private String dbUrl;
+		
+		//private String userId = "admin-Aiicodev";      //
+		
+		
+		@Bean("pmf")
+		@Scope(value = "singleton")
+		public PersistenceManagerFactory producePersistenceManagerFactory()
+		{
+
+			logger.info(" -------- producePersistenceManagerFactory ------- ");
+			
+			initContextFactory(dbUrl);
+
+			PersistenceManagerFactory pmf = initPMF();
+			
+			return pmf;
+		}
+		
+		
+		
+		public PersistenceManagerFactory initPMF()
+		{
+
+			logger.info(" -------- initPMF ------- ");
+
+			PersistenceManagerFactory pmf = null;
+
+			try {
+
+				// initContextFactory(dbUrl);
+
+				pmf = Utils.getPersistenceManagerFactory();
+
+				
+				
+				logger.info(" is pmf null ? ");
+				
+				if (pmf != null)
+				{
+					logger.info(" no it is not null.  ");
+					
+					logger.info(" pmf initialised locally  !");
+				}
+				else
+				{
+					logger.info(" is pmf null oh !!! ");
+				}
+
+			} catch (Exception e) {
+
+				logger.severe(" error: " + e.getMessage());
+
+				logger.log(Level.SEVERE, " error initialising local pmf ! ", e);
+
+				// new ServiceException(e).log();
+			}
+
+			return pmf;
+		}
+
+		
+		
+		 public void initContextFactory(String dbUrl) 
+		 {
+			  
+			  logger.info(" -----  initContextFactory ------ ");
+			  
+			  logger.info(" db url: " + dbUrl);
+			  
+			  try {
+			  
+			  logger.info(" inside initContextFactory() ---");
+			  
+			  
+			  if (!NamingManager.hasInitialContextFactoryBuilder())
+			  {
+			  
+			  logger.info("---init non managed init context .... ---- ");
+			  
+			  
+			  
+			  
+			  // local
+			  
+			  NonManagedInitialContextFactoryBuilder.install( Collections.singletonMap(
+			  "org.openmdx.comp.env.jdbc_opencrx_CRX", dbUrl ) );
+			  
+			  
+			  logger.info(" context has been initialised !");
+			  
+			  
+				/*
+				 * // remote amzaon NonManagedInitialContextFactoryBuilder.install(
+				 * Collections.singletonMap( "org.openmdx.comp.env.jdbc_opencrx_CRX",
+				 * "jdbc:sqlserver:\\/\\/spaciofm.cvjywuu0shvj.us-west-2.rds.amazonaws.com:1433;databaseName=spacio_fm2;selectMethod=cursor?user=crmuser&password=crmpass433&driver=com.microsoft.sqlserver.jdbc.SQLServerDriver"
+				 * );
+				 */
+			  
+			  } else { logger.info(" context has already been initialised !!! "); }
+			  
+			  } catch (Exception ex) {
+			  
+			  logger.severe(" error message: " + ex.getMessage());
+			  
+			  ex.printStackTrace();
+			  
+			  }
+			  
+			  
+			  }
+		
+		
+		
+    }
+	
+	
+	@BeforeEach
+	void setUp() throws Exception 
+	{
+		
+		  String segment = "Test25";
+			
+		  String userId = "admin-Test25";
+		  
+		  estateBO.setCredentials(provider, segment, userId);
+	}
+
+	
+	
+	
+	
+	////@Test
+	void getAllEstates() 
+	{
+		
+		logger.info(" -- getAllEstates() -- ");
+		
+		
+		//fail("Not yet implemented");
+		
+		List<EstateDTO> estates = estateBO.getAllEstates();
+		
+		for (EstateDTO estateDTO : estates)
+		{
+			
+			logger.info(" xri: " + estateDTO.getUri());
+			
+			logger.info(" name: " + estateDTO.getName());
+			
+		}
+		
+		
+		  assertNotNull( estates, "the estates should not be null");
+	}
+	
+	//@Test
+	void createEstate() 
+	{
+		
+		logger.info(" -- createEstate() -- ");
+		
+		EstateDTO estate = new EstateDTO();
+		
+		estate.setCompanyEmail("nafbase2@gmail.com");
+		estate.setCompanyTelephone("08035030710");
+		estate.setCompanyWebsite("www.nafbase2.com");
+		estate.setDefaultTenantProfile((short)0);
+		estate.setInboundEmailAddress("demo2@spaciosystems.com");
+		estate.setInitialPassword("123");
+		estate.setInitialPasswordVerification("123");
+		estate.setName("Goodluck Jonathan Estate2");
+		estate.setOutboundEmailAddress("demo2@spaciosystems.com");
+		estate.setPostalAddress("PWD, Oshodi-Ikeja way");
+		estate.setSpacioSegment("Test25");
+		
+		//fail("Not yet implemented");
+		
+		ResponseDTO response = estateBO.createEstate(estate);
+			
+		assertNotNull( response, "response should not be null");
+		
+		assertTrue(response.getResult(), "result should be true");
+	}
+	
+	
+	
+	////@Test
+	void findEstatesSize() 
+	{
+		
+		logger.info(" -- getAllEstatesSize() -- ");
+		
+		
+		//fail("Not yet implemented");
+		
+		QueryBean queryBean = new QueryBean();
+		queryBean.setQuery("Medium");
+		queryBean.setPosition(0);
+		queryBean.setSize(5);
+		
+		
+		
+		int count = estateBO.findEstateSize(queryBean);
+		
+		
+		
+		
+		  assertNotNull( count, "the estates should return a value");
+	}
+	
+	
+	
+	////@Test
+	void findEstates() 
+	{
+		
+		logger.info(" -- findEstates() -- ");
+		
+		
+		//fail("Not yet implemented");
+		
+		QueryBean queryBean = new QueryBean();
+		queryBean.setQuery("Medium");
+		queryBean.setPosition(0);
+		queryBean.setSize(5);
+		
+		
+		
+		List<EstateDTO> estates = estateBO.findEstate(queryBean);
+		
+		for (EstateDTO estateDTO : estates)
+		{
+			
+			logger.info(" xri: " + estateDTO.getUri());
+			
+			logger.info(" name: " + estateDTO.getName());
+			
+		}
+		
+		
+		  assertNotNull( estates, "the estates should not be null");
+	}
+	
+	
+
+}

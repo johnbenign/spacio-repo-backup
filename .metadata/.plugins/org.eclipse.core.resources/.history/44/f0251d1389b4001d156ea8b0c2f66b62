@@ -1,0 +1,17 @@
+package com.spacio.fm.core.activity.enums;
+
+public enum WorkOrderConstant {
+	CLOSED("Closed"),
+	COMPLETED("Completed"),
+	NOT_YET_STARTED("Not Yet Started"),
+	ON_HOLD("On Hold"),
+	IN_PROGRESS("In Progress");
+	
+	String actualValue;
+	
+	WorkOrderConstant(String actualValue) {
+		this.actualValue = actualValue;
+	}
+}
+//States: Closed, Completed, Not Yet Started, On Hold, In Progress
+	//Transitions: Add Note, Assign, Close, Complete, Re Assign, Pause, Resume, Client Reply, Operator Reply

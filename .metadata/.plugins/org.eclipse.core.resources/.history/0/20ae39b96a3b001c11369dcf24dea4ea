@@ -1,0 +1,6 @@
+package snippet;
+
+public class Snippet {
+	mvnw install:install-file -Dfile=opencrx-rsk_golden_server.jar -DgroupId=opencrx-rsk-golden-server -DartifactId=opencrx-rsk-golden-server -Dversion=4.1 -Dpackaging=jar -DcreateChecksum=true
+}
+

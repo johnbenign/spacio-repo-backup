@@ -1,0 +1,10 @@
+db.url=jdbc:sqlserver:\\/\\/127.0.0.1:1433;databaseName=AIICO_CRM;selectMethod=cursor?user=crmuser&password=crmpass433&driver=com.microsoft.sqlserver.jdbc.SQLServerDriver
+crx.userId=kiki1
+crx.password=kiki1
+<<<<<<< HEAD
+admin.prefix=admin-
+spring.main.allow-bean-definition-overriding=true
+=======
+db.url2=jdbc:oracle:thin:crmuser\\/Crmp@ssw0rd9$@spaciofm1_high?TNS_ADMIN=C:\\Wallet_SPACIOFM1
+# jdbc:oracle:thin:[USER/PASSWORD]@[HOST][:PORT]:SID
+>>>>>>> branch 'nyemike' of https://john_benign@bitbucket.org/spaciosystems/crxcustom.git

@@ -1,0 +1,584 @@
+package com.spacio.fm.controller;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.logging.Logger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import javax.servlet.http.HttpServletRequest;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.spacio.fm.core.home.bo.HomeBO;
+import com.spacio.fm.core.home.dto.CreateUserDTO;
+import com.spacio.fm.core.home.dto.GetNewMenusDTO;
+import com.spacio.fm.core.home.dto.GetSideBarMenusDTO;
+import com.spacio.crm.extension1.backend.AdminService;
+import com.spacio.crx.bo.Security2BO;
+import com.spacio.crx.bo.UserHome;
+import com.spacio.crx.dto.LogInResultDTO;
+import com.spacio.crx.dto.MenuItem2DTO;
+import com.spacio.crx.dto.PrimaryKey;
+import com.spacio.crx.dto.ResponseDTO;
+import com.spacio.crx.dto.RoleDTO;
+import com.spacio.crx.dto.UserDTO;
+
+
+
+
+
+@RestController
+@RequestMapping("/api/user-profiles")
+public class UserProfileController 
+{
+
+	private static final Logger logger = Logger.getLogger(UserProfileController.class.getName());
+	
+	@Value("${provider}")
+    private String provider;
+
+    @Value("${segment}")
+    private String segment;
+
+	/*
+	 * @Value("${defaultLogInSegment}") private String defaultLogInSegment;
+	 * 
+	 * @Value("${defaultLogInUser}") private String defaultLogInUser;
+	 */
+
+
+    @Value("${adminSegment}")
+    private String adminSegment;
+    
+    @Autowired
+    private UserHome userHome;
+    
+    
+    @Autowired
+    private Security2BO security2BO;
+    
+    
+    @Autowired
+	private HomeBO homeBO;
+	
+	
+	public UserProfileController()
+	{
+		logger.info(" -- UserProfileController() -- ");
+	}
+	
+		
+	
+	
+	@GetMapping("/{id}")	
+	public ResponseEntity<?> getUser(@PathVariable String id) 
+	{
+		
+		logger.info(" -- getUser() -- ");
+		
+		
+		logger.info(" user id " + id  + " from segment: " + segment);
+		
+		UserDTO user = userHome.getUser(id, segment);
+		
+		
+		//ResponseEntity.ok("Hello World!")
+		
+		//ResponseEntity responseEntity = null;
+		
+		if (user != null)
+		{
+			
+			return ResponseEntity.ok(user);
+		}
+		else
+		{
+			return new ResponseEntity<>("User profile does not exist", HttpStatus.NOT_FOUND);
+		}
+			
+	   // return user;
+	}
+	
+	
+	@GetMapping("/get-profile")	
+	public ResponseEntity<?> getUser(@RequestParam String userId, @RequestParam String password) 
+	{
+		
+		logger.info(" -- getUserProfile() -- ");
+		
+		  LogInResultDTO result = userHome.logIn(userId, password);
+		  
+		  UserDTO userDTO = null;
+	        
+	        
+	        if (result == null)
+	        {
+	        	
+	        	logger.severe(" log in returned null !");
+	        	
+	        	return null;
+	        }
+		
+		
+		
+	        if (!result.getResult())
+	        {               
+	           
+	     	   logger.severe(" log in attempt failed ! "); 
+	     	   
+	     	  return new ResponseEntity<>("User id or password not valid", HttpStatus.BAD_REQUEST);
+	        
+	          //  return null;
+	        }
+	        else
+	        {
+	     	   
+	            List<String> segments = result.getSegments();
+	            
+	            String segmentName = segments.get(0);
+	        
+	            
+	            List<RoleDTO> roles = (List<RoleDTO>)result.getResponse();
+	            
+	           String principalId = result.getPrincipalId();
+	           String loginState = result.getLoginState();
+	           String firstTimeLogin = result.getFirstTimeLogin();
+	           Integer successLoginCount = result.getSuccessLoginCount();
+	           Integer failedLoginCount = result.getFailedLoginCount();
+	           Date lastLoginAt = result.getLastLoginAt();
+	           
+	           String logInId = result.getLogInId();
+	            
+	             PrimaryKey primaryKey = new PrimaryKey(principalId);
+	               
+	               userDTO = userHome.getUser(primaryKey, segments.get(0));     // 20190927 users will only belong to one segment
+	              
+	               userDTO.setUserRoles(roles);
+	               userDTO.setSegmentName(segmentName);
+	               userDTO.setLoginState(loginState);
+	               userDTO.setFirstTimeLogin(firstTimeLogin);
+	               userDTO.setSuccessLoginCount(successLoginCount);
+	               userDTO.setFailedLoginCount(failedLoginCount);
+	               userDTO.setLastLoginAt(lastLoginAt);  
+	           
+	            //   userDTO.setTenantLicenseXri(licenseXri);
+	            //   userDTO.setTenantLicenseActive(tenantLicenseActive);
+	           
+	                userDTO.setLogInId(logInId);
+	       
+	         logger.info("xri: " + userDTO.getUri());
+	           
+	         logger.info(" user logged in !");
+	   
+	         logger.info(" ££££££££££££££££££££££££££££££££ ");
+	   
+	          logger.info(" user has logged in ! ! !");
+	          
+	        }
+	        
+	        
+	        
+	        if (userDTO != null)
+			{
+				
+				return ResponseEntity.ok(userDTO);
+			}
+			else
+			{
+				return new ResponseEntity<>("User profile does not exist", HttpStatus.NOT_FOUND);
+			}
+	        
+	        
+	   // return userDTO;
+	}
+	
+	
+	
+	@PutMapping("/log-out/{id}")	
+	public ResponseEntity<?> logOut(@PathVariable String id) 
+	{
+		
+		logger.info(" -- logOut -- ");
+		
+		ResponseDTO response = new ResponseDTO();
+		
+		response.setResult(true);
+		
+		logger.info(" user id " + id);
+		
+		
+		  String regex = "(([A-Za-z0-9_\\-\\.])+\\@([A-Za-z0-9_\\-\\.])+\\.([A-Za-z]{2,4}))(((;|,|; | ;| ; | , | ,){1}"
+                  +"([A-Za-z0-9_\\-\\.])+\\@([A-Za-z0-9_\\-\\.])+\\.([A-Za-z]{2,4}))*)";
+                  
+          String emailAddresses = id;
+          Pattern pattern = Pattern.compile(regex);
+          Matcher matcher=pattern.matcher(emailAddresses);
+             
+          List<String> errors = new ArrayList<String>();
+          
+          if (matcher.matches())//checks if the login id supplied has the format of an email address
+          {   
+              logger.info(" the login id is an email address, proceed...");
+              
+              updateLoginState(id,"N", errors );
+          }
+   
+          
+   logger.info(this.getClass().getName() + ": updating login state");
+   
+           updateLastLoginAt(id, new Date(), errors );
+           
+           
+           if (errors.size() > 0)
+           {
+        	  // return ResponseEntity.ok(user);
+        	   
+        	   response.setErrors(errors);
+        	   response.setResult(false);
+        	   
+        	   
+        	   return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+           }
+           else
+        	   return  ResponseEntity.ok(response);
+             	   
+	}
+	
+	
+	@PostMapping("/onboard-resident")	
+	public ResponseEntity<?> onboardResident(@RequestBody CreateUserDTO user) 
+	{
+		
+		logger.info(" -- onboardResident -- ");
+		
+	   
+           ResponseDTO response = new ResponseDTO();
+           
+        //   String adminUserId = "admin-" + user.getSegmentName();
+           
+        //   logger.info(" adminUserId: " + adminUserId);
+				
+        //   homeBO.setCredentials(provider, user.getSegmentName(), adminUserId);
+        //   homeBO.setCredentials(provider, segment, adminSegment);
+           
+	    	response = homeBO.createResidentUser(user);
+	     	
+	    	  if (!response.getResult())
+		     {  
+	    		  logger.severe(" unable to onboard resident ! "); 
+		     	   
+		     	  return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);		        
+		     }
+	    	 else
+	    	 {
+	    		 return ResponseEntity.ok(response);
+	    	 }
+	    	
+		
+		
+	}
+	
+	
+	@PostMapping("/register-resident")	
+	public ResponseEntity<?> registerResident(@RequestBody CreateUserDTO user) 
+	{
+		
+		logger.info(" -- registerResident -- ");
+		
+		  ResponseDTO response = new ResponseDTO();
+			
+		//  String adminUserId = "admin-" + user.getSegmentName();
+          
+       //   logger.info(" adminUserId: " + adminUserId);
+				
+        //  homeBO.setCredentials(provider, user.getSegmentName(), adminUserId);
+          homeBO.setCredentials(provider, segment, adminSegment);
+		  
+	    	response = homeBO.createResidentUser(user);
+	     	
+	    	
+	    	  if (!response.getResult())
+		     {  
+	    		  
+	    		  logger.severe(" unable to register resident ! "); 
+		     	   
+		     	  return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);		        
+		     }
+	    	 else
+	    	 {
+	    		 return ResponseEntity.ok(response);
+	    	 }
+	    	
+	}
+	
+	
+	
+	@PostMapping("/onboard-fm")	
+	public ResponseEntity<?> onboardFM(@RequestBody CreateUserDTO user) 
+	{
+		
+		logger.info(" -- onboardFM -- ");
+		
+		ResponseDTO response = new ResponseDTO();
+		
+		
+		// String adminUserId = "admin-" + user.getSegmentName();
+         
+       //  logger.info(" adminUserId: " + adminUserId);
+				
+         //homeBO.setCredentials(provider, user.getSegmentName(), adminUserId);
+         homeBO.setCredentials(provider, segment, adminSegment);
+				
+	    	response = homeBO.createFMUser(user);
+	     	
+	    	  if (!response.getResult())
+		     {  
+	    		  logger.severe(" unable to create fm ! "); 
+		     	   
+		     	  return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);		        
+		     }
+	    	 else
+	    	 {
+	    		 return ResponseEntity.ok(response);
+	    	 }
+	    	
+	}
+	
+	
+	
+	
+	
+	//will come back to this later bcos they are using request param and request body together
+	@PostMapping("/side-menu")
+	public List<MenuItem2DTO> getSideBarMenus(HttpServletRequest request, @RequestBody GetSideBarMenusDTO requestDTO)
+    {
+
+        logger.info(" -- getSideBarMenus() -- ");
+      
+        String provider = request.getHeader("provider");
+		String tenantId = request.getHeader("tenant-id");
+		String userId = request.getHeader("user-id");
+     
+        logger.info(" log in id: " + requestDTO.getId());
+
+       // List<RoleDTO> roles = user.getUserRoles();
+
+     
+       RoleDTO sideBarRole = null;
+
+         for (RoleDTO role : requestDTO.getRoles() )
+         {
+
+           
+            if ((role.getName().equalsIgnoreCase(AdminService.fmSideMenu)) || (role.getName().equalsIgnoreCase(AdminService.resSideMenu)))
+            {
+               logger.info(" name: " + role.getName());
+
+
+                sideBarRole = role;
+            }
+
+         }
+
+
+         List<MenuItem2DTO> menus = new ArrayList<MenuItem2DTO>();
+
+         if (sideBarRole != null)
+         {
+            menus = security2BO.getRoleMenus2(tenantId, requestDTO.getId(), sideBarRole);
+         }
+         else
+         {
+            logger.warning(" no side bar menu's configured !!! ");
+         }
+
+         
+
+       return menus;
+    }
+
+
+	@PostMapping("/new-menu")
+    public List<MenuItem2DTO> getNewMenus(HttpServletRequest request, @RequestBody GetNewMenusDTO requestDTO)
+    {
+
+        logger.info(" -- getNewMenus() -- ");
+      
+        String provider = request.getHeader("provider");
+		String tenantId = request.getHeader("tenant-id");
+		String userId = request.getHeader("user-id");
+        
+        logger.info(" log in id: " + requestDTO.getId());
+
+      //  List<RoleDTO> roles = user.getUserRoles();
+
+     
+       RoleDTO newMenuRole = null;
+
+         for (RoleDTO role : requestDTO.getRoles() )
+         {
+
+         
+            if ((role.getName().equalsIgnoreCase(AdminService.fmNewMenu)) || (role.getName().equalsIgnoreCase(AdminService.resNewMenu)))
+            {
+               logger.info(" name: " + role.getName());
+
+                newMenuRole = role;
+            }
+
+         }
+
+
+         List<MenuItem2DTO> menus = new ArrayList<MenuItem2DTO>();
+
+         if (newMenuRole != null)
+         {
+            menus = security2BO.getRoleMenus2(tenantId, requestDTO.getId(), newMenuRole);
+         }
+         else
+         {
+            logger.warning(" no new menu's configured !! ");
+         }
+
+         
+
+       return menus;
+    }
+
+	
+	 private ResponseDTO updateLoginState(String userId, String state, List<String> errors)
+	    {
+	       // UserHomeBO userHomeBO = new UserHomeBO();
+		 
+		 logger.info(" -- updateLoginState -- ");
+	        
+	        ResponseDTO response = userHome.updateLoginState(userId, state);
+	        
+	        if(response.getErrorMsg() == null)
+	        {
+	            logger.severe("error msg is null");
+	        }
+	        else
+	        {
+	        	
+	        	
+	            if(!response.getErrorMsg().isEmpty())
+	            {
+	                logger.severe("error: " + response.getErrorMsg());
+	                
+	                errors.add(response.getErrorMsg());
+	                
+	               // JSFUtils.addFacesErrorMessage("error: " + response.getErrorMsg());
+	                
+	                return response;
+	            }
+	        }
+	        
+	        
+	        if (response.getResult())
+	        {
+	            logger.severe(" login state set to " + state);
+	            
+	            return response;
+	        }
+	        else
+	        {
+	            logger.severe(" unable to update login state");
+	          //  JSFUtils.addFacesErrorMessage(" unable to update login state");
+	            
+	           errors.add(" unable to update login state");
+	            
+	            return response;
+	        }
+	        
+	    }
+	    
+	    private void updateLastLoginAt(String userId, java.util.Date currentTime, List<String> errors)
+	    {   
+	        logger.info(this.getClass().getName() + ": the userId gotten: " + userId);
+	        
+	       // UserHomeBO userHomeBO = new UserHomeBO();
+	        
+	        ResponseDTO response = userHome.updateLastLoginAt(userId, currentTime);
+	        
+	        if(response.getErrorMsg() == null)
+	        {
+	            logger.severe("error msg is null");
+	        }
+	        else
+	        {
+	            if(!response.getErrorMsg().isEmpty())
+	            {
+	                logger.severe("error: " + response.getErrorMsg());
+	                
+	               // JSFUtils.addFacesErrorMessage("error: " + response.getErrorMsg());
+	                
+	                errors.add(response.getErrorMsg());
+	                
+	                return;
+	            }
+	        }
+	        if(response.getResult())
+	        {
+	            logger.severe(" last login at has been updated ");
+	            
+	            return;
+	        }
+	        else
+	        {
+	            logger.severe(" unable to update last login");
+	           // JSFUtils.addFacesErrorMessage(" unable to update last login");
+	            
+	            errors.add(" unable to update last login");
+	            
+	            return;
+	        }
+	        
+	    }
+	
+	
+	    @CrossOrigin
+	    @PutMapping("/current-estate/")
+		public ResponseEntity<?> updateCurrentEstate(@RequestParam("user-id") String userId, @RequestParam("contact-id") String contactXri, @RequestParam("estate-id") String estateXri)
+	    {
+	    	
+	    	  logger.info("  -- updateCurrentEstate -- ");
+	    	
+	        	userHome.setCredentials(provider, segment, userId);
+	        	
+	        	
+	        	
+	        	
+	        	
+	        ResponseDTO response = userHome.updateDefaultEstate(contactXri, estateXri);
+	    	
+	        if (response.getResult())
+			{
+				
+				return ResponseEntity.ok(response);
+			}
+			else
+			{
+				return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+			}
+	        
+	        
+	    }
+	    
+	    
+	
+}

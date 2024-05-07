@@ -1,0 +1,187 @@
+package com.spacio.fm.core.contract;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+import java.math.BigDecimal;
+import java.util.Date;
+import java.util.List;
+import java.util.logging.Logger;
+
+import javax.jdo.PersistenceManager;
+import javax.jdo.PersistenceManagerFactory;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.test.context.SpringBootTest;
+
+import com.spacio.crm.contract1.cci2.ServicePaymentQuery;
+import com.spacio.crm.contract1.jmi1.ServicePayment;
+import com.spacio.crx.dto.PrimaryKey;
+import com.spacio.crx.dto.ResponseDTO;
+import com.spacio.crx.util.SegmentUtil;
+import com.spacio.fm.core.contract.bo.ServicePaymentBO;
+import com.spacio.fm.core.contract.dto.RegisterServicePaymentDTO;
+import com.spacio.fm.core.contract.dto.ServiceChargeDTO;
+import com.spacio.fm.core.contract.dto.ServiceChargeListDTO;
+import com.spacio.fm.core.contract.dto.ServicePaymentDTO;
+import com.spacio.fm.core.contract.dto.ServicePaymentListDTO;
+@SpringBootTest
+class TestServicePayment {
+	
+	
+private static final Logger logger = Logger.getLogger(TestServicePayment.class.getName());
+	
+	@Value("${dev.provider}")
+	private String provider;
+	
+	private String segment = "INJREAL2";
+	
+	 private  String userId = "admin-INJREAL2";
+	 
+	 @Autowired
+	 private ServicePaymentBO servicePaymentBO;
+	 
+	 private SegmentUtil segmentUtil;
+	 
+	 @Autowired
+	 private PersistenceManagerFactory pmf;
+	   
+	   private PersistenceManager pm;
+	   
+	 
+
+	@BeforeEach
+	void setUp() throws Exception {
+		
+		
+		String segment = "INJREAL2";
+		
+		String userId = "admin-INJREAL2";
+		
+		servicePaymentBO.setCredentials("CRX", segment, userId);
+		
+		
+	}
+	
+	@Test
+	public void registerPayment()
+	{
+		RegisterServicePaymentDTO payment = new RegisterServicePaymentDTO();
+		
+		payment.setAmount(new BigDecimal(5000));
+		payment.setPaymentDate(new Date());
+		payment.setPaymentMethod((short)0);
+		payment.setReference("Benign");
+		payment.setRemarks("First Payment");
+		
+		String contractId = "RXE66WYAUEZMY1RBKADZNXYIN";
+		//serviceContract/CRX/INJREAL2/RXE66WYAUEZMY1RBKADZNXYIN
+		//xri://@openmdx*com.spacio.crm.contract1/provider/CRX/segment/INJREAL2/serviceContract/LBQX0F6WRPXPO5W01SFO5C6MK/serviceCharge/L1THL45T63DNW64MSFT2BIJB3
+		String serviceChargeId = "RNYY4M1PEYODO1P1MVGNDJHQ0";
+
+		ResponseDTO response = servicePaymentBO.registerPayment(contractId, serviceChargeId, payment);
+		
+		assertNotNull(response, "response should not be null");
+		assertTrue(response.getResult(), "result should be true");
+		
+		logger.info(" --- payment successfully made --- ");
+	}
+
+	
+	@Test
+	void getGeneralPayments() 
+	{
+		//
+		
+		logger.info(" --- getGeneralPayments -- ");
+		
+		 //segmentUtil = new SegmentUtil(provider, segment);
+		
+		
+		ResponseDTO response = servicePaymentBO.getGeneralPayments();
+		
+		assertNotNull(response, "response should not be null");
+		
+		assertTrue(response.getResult(), "result should be true");
+		
+		List<ServicePaymentListDTO> payments = (List<ServicePaymentListDTO>) response.getResponse();
+		
+		payments.forEach(payment -> logger.info(" ---- amount : " + payment.getAmount()));
+		
+		logger.info(" pm closed ! ");
+	//}
+		
+	}
+	
+	@Test
+	public void getAllServicePayment()
+	{
+		String contractId = "RXE66WYAUEZMY1RBKADZNXYIN";
+		
+		String serviceChargeId = "RNYY4M1PEYODO1P1MVGNDJHQ0";
+		
+		servicePaymentBO.setContractId(contractId);
+		
+		servicePaymentBO.setServiceChargeId(serviceChargeId);
+		
+		ResponseDTO response = servicePaymentBO.getAllPayments(1,2);
+		
+		assertNotNull(response, "response should not be null");
+		
+		assertTrue(response.getResult(), "result should be true");
+		
+		List<ServicePaymentListDTO> list = (List<ServicePaymentListDTO>) response.getResponse();
+		
+		list.forEach(payment -> logger.info("payment id: " + payment.getXri()));
+	}
+	
+	@Test
+	public void getServicePayment()
+	{
+		String contractId = "RXE66WYAUEZMY1RBKADZNXYIN";
+		
+		//serviceCharge/CRX/INJREAL2/RXE66WYAUEZMY1RBKADZNXYIN/RNYY4M1PEYODO1P1MVGNDJHQ0
+		String serviceChargeId = "RNYY4M1PEYODO1P1MVGNDJHQ0";
+		
+		String servicePaymentId = "9EPEP6IAP0FZGBKVM5JY2GBJ7";
+		
+		servicePaymentBO.setContractId(contractId);
+		
+		servicePaymentBO.setServiceChargeId(serviceChargeId);
+		
+		ResponseDTO response = servicePaymentBO.getServicePaymentById(servicePaymentId);
+		
+		assertNotNull(response, "response should not be null");
+		
+		assertTrue(response.getResult(), "result should be true");
+		
+		ServicePaymentDTO servicePayment = (ServicePaymentDTO) response.getResponse();
+		
+		logger.info(" --- amount paid : " + servicePayment.getAmount());
+	}
+	
+	@Test
+	public void testUpdateServicePayment()
+	{
+		logger.info(" --- about to update service charge --- ");
+		
+		ServicePaymentDTO servicePayment = new ServicePaymentDTO();
+		
+		servicePayment.setAmount(new BigDecimal(2000));
+		servicePayment.setKey(new PrimaryKey("9EPEP6IAP0FZGBKVM5JY2GBJ7"));
+		
+		servicePaymentBO.setContractId("RXE66WYAUEZMY1RBKADZNXYIN");
+		
+		servicePaymentBO.setServiceChargeId("RNYY4M1PEYODO1P1MVGNDJHQ0");
+		
+		ResponseDTO response = servicePaymentBO.updateServicePayment(servicePayment);
+		
+		assertNotNull(response, "response should not be null");
+		assertTrue(response.getResult(), "result should be true");
+		
+		logger.info(" --- payment updated successfully --- ");
+	}
+
+}

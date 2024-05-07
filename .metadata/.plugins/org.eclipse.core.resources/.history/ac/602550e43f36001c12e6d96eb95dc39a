@@ -1,0 +1,526 @@
+package com.spacio.fm;
+
+import java.util.ArrayList;
+import static org.junit.jupiter.api.Assertions.*;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+import javax.jdo.PersistenceManager;
+import javax.jdo.PersistenceManagerFactory;
+import javax.naming.Context;
+import javax.naming.InitialContext;
+import javax.naming.NamingException;
+import javax.naming.spi.NamingManager;
+import javax.sql.DataSource;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.opencrx.kernel.utils.Utils;
+import org.openmdx.kernel.lightweight.naming.NonManagedInitialContextFactoryBuilder;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Scope;
+import org.springframework.mock.jndi.SimpleNamingContextBuilder;
+import org.w3c.spi2.Datatypes;
+import org.w3c.spi2.Structures;
+
+import com.microsoft.sqlserver.jdbc.SQLServerDataSource;
+import com.spacio.crm.extension1.jmi1.ContactT;
+import com.spacio.crm.extension1.jmi1.CreateUserParam;
+import com.spacio.crm.extension1.jmi1.CreateUserReturn;
+import com.spacio.crm.extension1.util.SegmentUtil;
+import com.spacio.crx.bo.ConnectionManager;
+import com.spacio.fm.account1.jmi1.CreateEstateParam;
+import com.spacio.fm.account1.jmi1.CreateEstateResult;
+
+@SpringBootTest
+public class TestUserHome
+{
+	private static final Logger logger = Logger.getLogger(TestUserHome.class.getName());
+	
+	@Autowired
+	//@Qualifier("conn")
+	private ConnectionManager conn;
+	
+	private PersistenceManager pm;
+	
+	
+	private static Context context;
+	private InitialContext jndiContext;
+	
+	@TestConfiguration
+    static class PMFConfiguration 
+    {
+ 
+		@Value("${db.url}")
+		private String dbUrl;
+		private InitialContext initContext;
+		private String jndi_pmf;
+		private String jndiName = "java:comp/env/jdbc_injreal2";
+		
+		//private String userId = "admin-Aiicodev";      //
+		
+		
+		@Bean("pmf")
+		@Scope(value = "singleton")
+		public PersistenceManagerFactory producePersistenceManagerFactory() throws NamingException
+		{
+
+			
+		     initContextFactory2(dbUrl);
+			
+			
+			PersistenceManagerFactory pmf = initPMF();
+			
+			bindPMF(pmf);
+			
+			PersistenceManagerFactory pmf2 = null;
+			
+			try
+			{
+		   
+				//pmf2 = (PersistenceManagerFactory) new InitialContext().lookup(jndiName); 
+				
+				logger.info(" get pmf from initial context  ... ");
+				
+				logger.info("");
+				
+				pmf2 = (PersistenceManagerFactory) new InitialContext().lookup(jndi_pmf); 
+
+
+			
+	    	if (pmf2 == null)
+	    	{
+	    	  logger.warning("  -- pmf is null -- ");
+	    	}
+	    	else
+	    	{
+	    		 logger.info("  -- pmf is not null ! hurray !! -- ");
+	    	}
+	    	
+			}
+			catch (Exception ex)
+			{
+				logger.severe(" jndi look up error message . . ");
+				
+				logger.severe(" jndi look up error message: " + ex.getMessage());
+				
+			}
+	    	//return pmf2;
+			
+			
+			return pmf2;
+		}
+		
+		private void bindPMF(PersistenceManagerFactory pmf)
+		{
+			
+			logger.info(" -- bind pmf -- ");
+			
+			logger.info(" -- bind pmf to initial context -- ");
+			
+			 jndi_pmf = jndiName + "_pmf";
+			
+			logger.info(" jndi pmf: " + jndi_pmf);
+			
+			 
+				try {
+					
+				//	SimpleNamingContextBuilder.emptyActivatedContextBuilder();
+					
+					
+					this.initContext = new InitialContext();
+					
+					this.initContext.bind(jndi_pmf, pmf);
+					
+					
+				} 
+				catch (NamingException e)
+				{
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			
+			
+		}
+		
+		
+		public void initContextFactory2(String dbUrl) 
+		 {
+			  
+			  logger.info(" -----  initContextFactory ------ ");
+			  
+			  logger.info(" db url: " + dbUrl);
+			  
+			  try {
+			  
+			  logger.info(" inside initContextFactory() ---");
+			  
+			 
+			  
+			  if (!NamingManager.hasInitialContextFactoryBuilder())
+			  {
+			  
+			  logger.info("---init non managed init context .... ---- ");
+			  
+			  
+			  // local
+			  
+			  NonManagedInitialContextFactoryBuilder.install( Collections.singletonMap(
+			  "org.openmdx.comp.env.jdbc_opencrx_CRX", dbUrl ) );
+			  
+			  
+			  logger.info(" context has been initialised !");
+			  
+			  
+				/*
+				 * // remote amzaon NonManagedInitialContextFactoryBuilder.install(
+				 * Collections.singletonMap( "org.openmdx.comp.env.jdbc_opencrx_CRX",
+				 * "jdbc:sqlserver:\\/\\/spaciofm.cvjywuu0shvj.us-west-2.rds.amazonaws.com:1433;databaseName=spacio_fm2;selectMethod=cursor?user=crmuser&password=crmpass433&driver=com.microsoft.sqlserver.jdbc.SQLServerDriver"
+				 * );
+				 */
+			  
+			  } else { logger.info(" context has already been initialised !!! "); }
+			  
+			  } catch (Exception ex) {
+			  
+			  logger.severe(" error message: " + ex.getMessage());
+			  
+			  ex.printStackTrace();
+			  
+			  }
+			  
+			  
+			  }
+		
+		
+		public PersistenceManagerFactory initPMF()
+		{
+
+			logger.info(" -------- initPMF ------- ");
+
+			PersistenceManagerFactory pmf = null;
+
+			try {
+
+				// initContextFactory(dbUrl);
+
+				pmf = Utils.getPersistenceManagerFactory();
+
+				
+				
+				logger.info(" is pmf null ? ");
+				
+				if (pmf != null)
+				{
+					logger.info(" no it is not null.  ");
+					
+					logger.info(" pmf initialised locally  !");
+				}
+				else
+				{
+					logger.info(" is pmf null oh !!! ");
+				}
+
+			} catch (Exception e) {
+
+				logger.severe(" error: " + e.getMessage());
+
+				logger.log(Level.SEVERE, " error initialising local pmf ! ", e);
+
+				// new ServiceException(e).log();
+			}
+
+			return pmf;
+		}
+
+		
+		
+		 public void initContextFactory(String dbUrl) 
+		 {
+			  
+			  logger.info(" -----  initContextFactory ------ ");
+			  
+			  logger.info(" db url: " + dbUrl);
+			  
+			  try {
+			  
+			  logger.info(" inside initContextFactory() ---");
+			  
+			  
+			  if (!NamingManager.hasInitialContextFactoryBuilder())
+			  {
+			  
+			  logger.info("---init non managed init context .... ---- ");
+			  
+//			  Map<String, String> map = new HashMap<>();
+//			  
+//			  map.put("org.openmdx.comp.env.jdbc_opencrx_CRX", dbUrl);
+//			  map.put("jdbc_injreal2", dbUrl);
+			  
+//			  NonManagedInitialContextFactoryBuilder.install( Collections.singletonMap(
+//			  "org.openmdx.comp.env.jdbc_opencrx_CRX", dbUrl ) );
+			  
+			  //NonManagedInitialContextFactoryBuilder.install(map);
+			  
+			  context = NamingManager.getInitialContext(null);
+			  
+			  logger.info(" context has been initialised !");
+				/*
+				 * // remote amzaon NonManagedInitialContextFactoryBuilder.install(
+				 * Collections.singletonMap( "org.openmdx.comp.env.jdbc_opencrx_CRX",
+				 * "jdbc:sqlserver:\\/\\/spaciofm.cvjywuu0shvj.us-west-2.rds.amazonaws.com:1433;databaseName=spacio_fm2;selectMethod=cursor?user=crmuser&password=crmpass433&driver=com.microsoft.sqlserver.jdbc.SQLServerDriver"
+				 * );
+				 */
+			  
+			  }
+			  else
+			  {
+				  logger.info(" context has already been initialised !!! ");
+			  }
+			  
+			  } catch (Exception ex) {
+			  
+			  logger.severe(" error message: " + ex.getMessage());
+			  
+			  ex.printStackTrace();
+			  
+			  }
+			  
+			  
+			  }
+		
+		
+		
+    }
+	
+	//@Test
+	public void testCreateResidentUser2()
+	{
+		
+		String segmentName = "Test25";//this should always be spacio segment
+		String adminPrincipal = "Niklaus34";// this is the user id that will be displayed at the top left of the ui screen
+		//account/CRX/INJREAL2/9UGNGV8DZ7P4APR3FHZUXRLUT
+		//account/CRX/Test25/91YBE5WBMDYI3SJEU5S2HF4FI
+		//account/CRX/Test25/R7RMV14E83LYIGOFSTYH4ME4T
+		//account/CRX/Test25/L72XGJCPKI86KXL93B0J0WPCL
+		String estateId = "xri://@openmdx*org.opencrx.kernel.account1/provider/CRX/segment/Test25/account/93PFZ7ZAU6TPOXW7OYUM9K4QK";
+		String firstName = "Niklaus34";
+		String lastName = "Mikaelson34Evil";
+		String email = "niklausmikaelson34evil@gmail.com";
+		String telephone = "07036544572";
+		//String tenantId = "INJREAL2";
+		
+		short category = 2;
+		
+		List<Short> accountCategory = new ArrayList<>();
+		
+		accountCategory.add(category);
+		
+		SegmentUtil segmentUtil = new SegmentUtil("CRX", segmentName);
+	   	
+		pm = conn.getPersistenceManager("admin-Test25");
+		
+		//registerMockJNDI("jdbc_injreal2");
+		
+        com.spacio.crm.extension1.jmi1.Segment extensionSegment = segmentUtil.getExtensionSegment(pm);
+        
+        CreateUserParam in = Structures.create(
+        		CreateUserParam.class,
+                Datatypes.member(CreateUserParam.Member.adminPrincipalId, adminPrincipal),
+                Datatypes.member(CreateUserParam.Member.segmentName, segmentName),
+                Datatypes.member(CreateUserParam.Member.estateId, estateId),
+                Datatypes.member(CreateUserParam.Member.role, (short)1),
+                //Datatypes.member(CreateUserParam.Member.tenantId, tenantId),
+                Datatypes.member(CreateUserParam.Member.contact,
+                		Structures.create(
+                				ContactT.class,
+                				Datatypes.member(ContactT.Member.firstName, firstName),
+                				Datatypes.member(ContactT.Member.lastName, lastName),
+                				Datatypes.member(ContactT.Member.email, email),
+                				Datatypes.member(ContactT.Member.accountCategory, accountCategory),
+                				Datatypes.member(ContactT.Member.telephone, telephone)
+                				)
+                		)
+                //Datatypes.member(CreateUserParam.Member.segmentName, segmentName)
+             );
+        
+        CreateUserReturn out = extensionSegment.createResidentUser4(in);
+        
+        logger.info(" --- get return code: " + out.getStatus().getReturnCode());
+        
+        logger.info("user home xri : " + out.getUser().getIdentity());
+        
+	}
+	
+	@Test
+	public void testCreateEstate()
+	{
+		String name = "Eagles Estate2";
+		String address = "Barrack road, Idimu";
+		String initialPassword = "123";
+		String initialPasswordVerification = "123";
+		String outboundEmailAddress = "johnbenign6@gmail.com";
+		String inboundEmailAddress = "bihugba@spaciosystems.com";
+		String companyTelNo = "07036544572";
+		String companyEmail = "eagles2@gmail.com";
+		String companyWebsite = "www.eagle2.com";
+		short defaultTenantProfile = 0;
+		//String tenantId = "INJREAL2";
+		
+		com.spacio.fm.util.SegmentUtil segmentUtil = new com.spacio.fm.util.SegmentUtil("CRX", "Test25");
+	   	
+		pm = conn.getPersistenceManager("admin-Root");
+		
+		//registerMockJNDI("jdbc_injreal2");
+		
+        com.spacio.fm.account1.jmi1.Segment fmAccountSegment = segmentUtil.getFMAccountSegment(pm);
+        
+        CreateEstateParam in = Structures.create(
+        		CreateEstateParam.class,
+        		Datatypes.member(CreateEstateParam.Member.name, name),
+        		Datatypes.member(CreateEstateParam.Member.address, address),
+        		Datatypes.member(CreateEstateParam.Member.companyEmail, companyEmail),
+        		Datatypes.member(CreateEstateParam.Member.companyTelephone, companyTelNo),
+        		Datatypes.member(CreateEstateParam.Member.companyWebsite, companyWebsite),
+        		Datatypes.member(CreateEstateParam.Member.defaultTenantProfile, defaultTenantProfile),
+        		Datatypes.member(CreateEstateParam.Member.inboundEmailAddress, inboundEmailAddress),
+        		Datatypes.member(CreateEstateParam.Member.initialPassword, initialPassword),
+        		Datatypes.member(CreateEstateParam.Member.initialPasswordVerification, initialPasswordVerification),
+        		Datatypes.member(CreateEstateParam.Member.outboundEmailAddress, outboundEmailAddress)
+        		);
+        
+        CreateEstateResult out = fmAccountSegment.createEstate2(in);
+        
+        logger.info(" --- return code is: " + out.getStatus().getReturnCode());
+        
+        logger.info(" the newly created estate xri is : " + out.getEstate().getIdentity());
+        		
+	}
+
+	public void registerMockJNDI(String jndiName)
+	{
+		//String jndiName = "jdbc_injreal2";
+		String dbUser = "crmuser";
+		String dbPassword = "crmpass433";
+		String serverName = "localhost";
+		Integer portNumber = 1433;
+		String dbName = "AIICO_CRM";
+		//String driverName = "com.microsoft.sqlserver.jdbc.SQLServerDriver";
+		String dbUrl = "jdbc:sqlserver://127.0.0.1:1433;databaseName=AIICO_CRM";
+		
+		String jndiPath = "java:comp/env/jdbc/" + jndiName;
+		
+		try
+		{
+			SQLServerDataSource sqlServerDataSource = new SQLServerDataSource();
+			
+			sqlServerDataSource.setUser(dbUser);
+			sqlServerDataSource.setDatabaseName(dbName);
+			sqlServerDataSource.setPassword(dbPassword);
+			sqlServerDataSource.setPortNumber(portNumber);
+			sqlServerDataSource.setServerName(serverName);
+			sqlServerDataSource.setURL(dbUrl);
+			sqlServerDataSource.setSelectMethod("cursor");
+			
+			if(context == null)
+			{
+				logger.severe(" there was a problem initializing the jndi context ...");
+				
+				throw new Exception("unable to initialize jndi context!");
+			}
+			
+			jndiContext = (InitialContext) context.createSubcontext("jndiContext");
+			
+			jndiContext.bind(jndiPath, sqlServerDataSource);
+			
+//			DataSource ds = (DataSource) context.lookup("org.openmdx.comp.env.jdbc_opencrx_CRX");
+////			
+//			if(ds.getConnection() == null)
+//			{
+//				logger.info(" --- data source connection is null --- ");
+//			}
+//			else
+//			{
+//				logger.info(" --- data source connection is not null --- ");
+//			}
+//			
+////			assertNotNull(ds.getConnection());
+			
+			logger.info(" ---- jndi name bounded ! ----");
+			
+		}
+		catch(Exception e)
+		{
+			logger.severe(" error: " + e.getMessage() + e);
+		}
+	}
+	
+	//@Test
+	public void testCreateFMUser2()
+	{
+		Short accountCategory = 10;
+		
+		List<Short> accountCategories = new ArrayList<>();
+		
+		accountCategories.add(accountCategory);
+		
+		String adminPrincipalId = "Bolaji3";
+		
+		//account/CRX/Test25/3CE3Y4HGRNKDM6Y58F2TX7LZ9
+		String companyXri = "xri://@openmdx*org.opencrx.kernel.account1/provider/CRX/segment/Test25/account/3CE3Y4HGRNKDM6Y58F2TX7LZ9";
+		
+		//
+		String estateXri = "xri://@openmdx*org.opencrx.kernel.account1/provider/CRX/segment/Test25/account/L72XGJCPKI86KXL93B0J0WPCL";
+		
+		
+		String segmentName = "Test25";
+		Short role = 21;
+		
+		String firstName = "Bolutife";
+		String lastName = "Bolaji";
+		String email = "bolutife@bolaji.com";
+		String telephone = "08035030710";
+		
+		com.spacio.fm.util.SegmentUtil segmentUtil = new com.spacio.fm.util.SegmentUtil("CRX", segmentName);
+	   	
+		pm = conn.getPersistenceManager("admin-Root");
+		
+		//registerMockJNDI("jdbc_injreal2");
+		
+        com.spacio.fm.home1.jmi1.Segment fmHomeSegment = segmentUtil.getFMHomeSegment(pm);
+        
+        com.spacio.fm.home1.jmi1.CreateUserParam in = Structures.create(
+        		com.spacio.fm.home1.jmi1.CreateUserParam.class,
+        		Datatypes.member(com.spacio.fm.home1.jmi1.CreateUserParam.Member.adminPrincipalId, adminPrincipalId),
+        		Datatypes.member(com.spacio.fm.home1.jmi1.CreateUserParam.Member.companyId, companyXri),
+        		Datatypes.member(com.spacio.fm.home1.jmi1.CreateUserParam.Member.estateId, estateXri),
+        		Datatypes.member(com.spacio.fm.home1.jmi1.CreateUserParam.Member.role, role),
+        		Datatypes.member(com.spacio.fm.home1.jmi1.CreateUserParam.Member.segmentName, segmentName),
+        		Datatypes.member(com.spacio.fm.home1.jmi1.CreateUserParam.Member.contact, 
+        				Structures.create(
+                				com.spacio.fm.home1.jmi1.ContactT.class,
+                				Datatypes.member(com.spacio.fm.home1.jmi1.ContactT.Member.firstName, firstName),
+                				Datatypes.member(com.spacio.fm.home1.jmi1.ContactT.Member.lastName, lastName),
+                				Datatypes.member(com.spacio.fm.home1.jmi1.ContactT.Member.email, email),
+                				Datatypes.member(com.spacio.fm.home1.jmi1.ContactT.Member.accountCategory, accountCategories),
+                				Datatypes.member(com.spacio.fm.home1.jmi1.ContactT.Member.telephone, telephone)
+                				)
+        				)
+        		);
+        
+        com.spacio.fm.home1.jmi1.CreateUserReturn out = fmHomeSegment.createFMUser2(in);
+        
+        logger.info(" --- return code is: " + out.getStatus().getReturnCode());
+        
+        logger.info(" the newly created user xri is : " + out.getUser().getIdentity());
+	}
+}

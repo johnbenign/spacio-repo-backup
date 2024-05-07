@@ -1,0 +1,29 @@
+package com.spacio.fm.core.activity.bo;
+
+import com.spacio.crx.bo.GenericBO;
+import com.spacio.crx.dto.ResponseDTO;
+import com.spacio.fm.core.activity.dto.CreateEstateMeetingDTO;
+import com.spacio.fm.core.activity.dto.EstateMeetingDTO;
+import com.spacio.fm.core.activity.dto.FollowUpDTO;
+import com.spacio.fm.core.activity.enums.EstateMeetingStatus;
+
+public interface EstateMeetingBO extends GenericBO
+{
+	public ResponseDTO scheduleEstateMeeting(CreateEstateMeetingDTO estateMeeting);
+
+	ResponseDTO updateEstateMeeting(EstateMeetingDTO estateMeeting);
+
+	ResponseDTO getScheduledEstateMeeting(String estateMeetingId);
+
+	ResponseDTO doScheduleEstateMeetingFollowUp(FollowUpDTO followUp);
+
+	ResponseDTO getAllPendingMeetings();
+
+	ResponseDTO getAllPendingMeetingsByResident();
+
+	ResponseDTO getAllCompletedMeetings();
+
+	ResponseDTO getAllCompletedMeetingsByResident();
+
+	ResponseDTO getAllScheduledEstateMeetings(EstateMeetingStatus status);
+}

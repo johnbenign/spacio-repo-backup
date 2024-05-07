@@ -1,0 +1,38 @@
+package com.spacio.spring.scheduler;
+
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+
+import java.util.logging.Logger;
+
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.scheduling.annotation.Scheduled;
+
+import com.spacio.spring.scheduler.service.JobUploadSchedulerService;
+import com.spacio.spring.upload.dto.ResponseDTO;
+
+@SpringBootTest
+public class TestJobUploadOrchestrator
+{
+	private static final Logger logger = Logger.getLogger(TestJobUploadOrchestrator.class.getName());
+	
+	@Autowired
+	private JobUploadSchedulerService service;
+	
+	
+	//@Scheduled
+	@Test
+	public void processJob() throws InterruptedException
+	{	
+		ResponseDTO response = service.process();
+		
+		assertNotNull("response cant be null", response);
+		
+		assertTrue("the result must be true", response.getResult());
+		
+		logger.info(response.getDescription());
+	}
+}

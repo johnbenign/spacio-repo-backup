@@ -1,0 +1,116 @@
+package com.spacio.fm.config;
+
+import java.util.logging.Logger;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.builders.WebSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+
+import com.spacio.fm.service.CustomUserDetailsService;
+import com.spacio.fm.service.FmDBRealm;
+
+
+@Configuration
+@EnableWebSecurity
+public class WebSecurityConfig extends WebSecurityConfigurerAdapter
+{
+
+	private static final Logger logger = Logger.getLogger(WebSecurityConfig.class.getName());
+	
+	
+	@Autowired
+	private CustomUserDetailsService userDetailsService;
+	
+	@Autowired
+	private CustomJwtAuthenticationFilter customJwtAuthenticationFilter;
+	
+	@Autowired
+	private JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
+	
+	
+	@Autowired
+    private FmDBRealm authProvider;
+    
+	
+	/*
+	 * @Bean public PasswordEncoder passwordEncoder(){ return new
+	 * BCryptPasswordEncoder(); }
+	 */
+	
+	
+	@Override
+	public void configure(AuthenticationManagerBuilder auth) throws Exception
+	{
+		// auth.userDetailsService(userDetailsService).passwordEncoder(passwordEncoder());
+		
+         logger.info(" ----- configure auth provider -------");
+    	
+        auth.authenticationProvider(authProvider);
+     //   auth.user
+        
+        logger.info(" FM db realm registered as auth provider ");
+		
+	}
+	
+	
+	@Bean
+	@Override
+	public AuthenticationManager authenticationManagerBean() throws Exception
+	{
+		return super.authenticationManagerBean();
+	}
+	
+	
+	
+	@Override
+	public void configure(HttpSecurity http) throws Exception 
+	{
+		
+		logger.info(" -- configure -- ");
+		
+		/*
+		 * http.csrf().disable()
+		 * .authorizeRequests().antMatchers("/helloadmin").hasRole("ADMIN")   // if the token is valid and is an admin then access this url
+		 * .antMatchers("/hellouser").hasAnyRole("USER","ADMIN")            // if the token is valid and is an admin or user then access this url
+		 * .antMatchers("/authenticate",
+		 * "/register").permitAll().anyRequest().authenticated()
+		 * .and().exceptionHandling().authenticationEntryPoint(
+		 * jwtAuthenticationEntryPoint).
+		 * and().sessionManagement().sessionCreationPolicy(SessionCreationPolicy.
+		 * STATELESS). and().addFilterBefore(customJwtAuthenticationFilter,
+		 * UsernamePasswordAuthenticationFilter.class);
+		 */
+		
+		//  http.cors()   // 20220407 for cors
+	//	 http.csrf().disable()  // 20220407 former approach
+		http.cors().and().csrf().disable()
+		// dont authenticate this particular request
+		 // .authorizeRequests().antMatchers("/api/authenticate","/api/register","/api/refreshtoken").permitAll().
+			.authorizeRequests().antMatchers("/api/authenticate", "/api/refreshtoken", "/api/estates/*",
+			"/api/user-profiles/onboard-resident",
+			"/api/user-profiles/onboard-fm","/api/configurations/app-config/*", "/api/user-profiles/current-estate/", "/home/authToken").permitAll().
+			// all other requests need to be authenticated
+			 anyRequest().authenticated()			
+			.and().exceptionHandling().authenticationEntryPoint(jwtAuthenticationEntryPoint).
+			and().sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS).
+			and().addFilterBefore(customJwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+			
+		
+	}
+	
+	@Override
+	public void configure(WebSecurity web) {
+		web.ignoring().antMatchers("/v2/api-docs", "/configuration/ui",
+				"/swagger-resources/**", "/configuration/**", "/swagger-ui.html",
+				"/webjars/**", "/csrf", "/");
+	}
+	
+}

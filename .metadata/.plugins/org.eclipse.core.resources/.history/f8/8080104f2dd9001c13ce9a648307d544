@@ -1,0 +1,92 @@
+package com.spacio.fm.core.contract.dto;
+
+import java.math.BigDecimal;
+import java.util.Date;
+import java.util.List;
+
+public class CreateServiceChargeDTO
+{
+	private Date startDate;
+    private Date endDate;
+    private Short paymentStatus;
+    private Integer durationUnit;
+    private Short durationFrequency;
+    private BigDecimal amount;
+    private BigDecimal amountOutstanding;
+    private String segmentName;
+    private String userId;
+
+
+    public void setStartDate(Date startDate) {
+        this.startDate = startDate;
+    }
+
+    public Date getStartDate() {
+        return startDate;
+    }
+
+    public void setEndDate(Date endDate) {
+        this.endDate = endDate;
+    }
+
+    public Date getEndDate() {
+        return endDate;
+    }
+
+    public void setPaymentStatus(Short paymentStatus) {
+        this.paymentStatus = paymentStatus;
+    }
+
+    public Short getPaymentStatus() {
+        return paymentStatus;
+    }
+
+    public void setDurationUnit(Integer durationUnit) {
+        this.durationUnit = durationUnit;
+    }
+
+    public Integer getDurationUnit() {
+        return durationUnit;
+    }
+
+    public void setDurationFrequency(Short durationFrequency) {
+        this.durationFrequency = durationFrequency;
+    }
+
+    public Short getDurationFrequency() {
+        return durationFrequency;
+    }
+
+    public void setAmount(BigDecimal amount) {
+        this.amount = amount;
+    }
+
+    public BigDecimal getAmount() {
+        return amount;
+    }
+
+    public void setAmountOutstanding(BigDecimal amountOutstanding) {
+        this.amountOutstanding = amountOutstanding;
+    }
+
+    public BigDecimal getAmountOutstanding() {
+        return amountOutstanding;
+    }
+
+	public String getSegmentName() {
+		return segmentName;
+	}
+
+	public void setSegmentName(String segmentName) {
+		this.segmentName = segmentName;
+	}
+
+	public String getUserId() {
+		return userId;
+	}
+
+	public void setUserId(String userId) {
+		this.userId = userId;
+	}
+    
+}

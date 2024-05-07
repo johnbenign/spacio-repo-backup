@@ -1,0 +1,196 @@
+package com.spacio.fm.controller.activity;
+
+import java.util.logging.Logger;
+
+import javax.validation.Valid;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.spacio.crx.dto.ResponseDTO;
+import com.spacio.fm.core.activity.bo.ResidentOrderBO;
+import com.spacio.fm.core.activity.dto.CreateResidentOrderDTO;
+import com.spacio.fm.core.activity.dto.FollowUpDTO;
+import com.spacio.fm.core.activity.dto.GetResOrdersDTO;
+import com.spacio.fm.core.activity.dto.ResidentOrderDTO;
+
+@RestController
+@RequestMapping("/api/resorders")
+public class ResidentOrderController 
+{
+	
+	  private static final Logger logger = Logger.getLogger(ResidentOrderController.class.getName());
+		
+		
+		@Value("${provider}")
+	    private String provider;
+		
+		
+		@Autowired
+		private ResidentOrderBO residentOrderBO;
+		
+	
+	
+	public ResidentOrderController()
+	{
+		logger.info(" -- ResidentOrderController() -- ");
+	}
+	
+	
+	@PostMapping("/getAll")	
+	public ResponseEntity<?> createResidentOrder(@Valid @RequestBody CreateResidentOrderDTO order)
+	{
+		
+		logger.info(" -- createResidentOrder -- ");
+		
+		ResponseDTO response = new ResponseDTO();
+		
+		 residentOrderBO.setCredentials(provider, order.getSegmentName(), order.getUserId());
+		 
+		 response = residentOrderBO.createResidentOrder(order);
+		 
+		 
+		 if (!response.getResult())
+		 {
+			  logger.severe(" unable to create resident order ! "); 
+	     	   
+	     	  return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+		 }
+		 else
+		 {
+			 return ResponseEntity.ok(response);
+		 }
+		
+		 
+	}
+	
+	
+	@PostMapping("/getAll")
+	public ResponseEntity<?> getAllResOrders(@Valid @RequestBody GetResOrdersDTO requestDTO) 
+	{
+		
+		logger.info(" -- getAllResOrders -- ");
+		
+		residentOrderBO.setCredentials(provider, requestDTO.getSegmentName(), requestDTO.getUserId());
+		
+//		residentOrderBO.setActivityTypeId(requestDTO.getActivityTypeId());
+		
+		ResponseDTO response = residentOrderBO.getAllResidentOrders(requestDTO.getIndex(), requestDTO.getRange());
+		
+		if(!response.getResult())
+		{
+			logger.severe(" unable to get all the resident orders --- ");
+			
+			return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+		}
+		
+		//List<ResidentOrderListDTO> resOrderList = (List<ResidentOrderListDTO>) response.getResponse();
+		
+		return ResponseEntity.ok(response);
+	}
+	
+	
+	@GetMapping("/count")	
+	public ResponseEntity<Long> getResOrdersSize(@RequestParam("segment") String segment, @RequestParam("user-id") String userId) 
+	{
+		
+		logger.info(" -- getResOrders count -- ");
+		
+		long resOrderCount = 0;
+		
+		residentOrderBO.setCredentials(provider, segment, userId);
+		
+		resOrderCount = residentOrderBO.getAllResidentOrdersSize();
+		
+		//return null;
+		
+		return ResponseEntity.ok(resOrderCount);
+	}
+	
+	
+	@GetMapping("/{id}")
+	public ResponseEntity<?> getResidentOrder(@PathVariable String id, @RequestParam("segment") String segment, @RequestParam("user-id") String userId)
+	{
+		
+		
+		logger.info(" -- getResidentOrder -- ");
+		
+		residentOrderBO.setCredentials(provider, segment, userId);
+		
+		//String generatedUri = baseUri + "/provider/" + provider + "/segment/" + segment + "/activity/" + id.trim();
+		
+		//logger.info(" generated Uri: " + generatedUri);
+		
+		
+		ResponseDTO response = residentOrderBO.getResidentOrder(id);
+		
+		if(!response.getResult())
+		{
+			logger.info(" --- unable to get resident order: " + response.getErrorMsg());
+			
+			return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+		}
+		
+		ResidentOrderDTO resOrder = (ResidentOrderDTO) response.getResponse();
+		
+		return ResponseEntity.ok(resOrder);	
+	}
+	
+	
+	@PutMapping
+	public ResponseEntity<?> updateResidentOrder(@Valid @RequestBody ResidentOrderDTO residentOrder)
+	{
+		
+		logger.info(" -- updateResidentOrder() -- ");
+		
+		residentOrderBO.setCredentials(provider, residentOrder.getSegmentName(), residentOrder.getUserId());
+		
+		ResponseDTO response = residentOrderBO.updateResidentOrder(residentOrder);
+		
+		
+		     if (!response.getResult())
+		     {  	    		 
+		    	 logger.severe(" unable to update resident ! "); 
+		     	   
+		     	  return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);		        
+		     }
+	    	 else
+	    	 {
+	    		 return ResponseEntity.ok(response);
+	    	 }
+		
+	}
+	
+	
+	@PostMapping("/follow-up")
+	public ResponseEntity<?> doResidentOrderFollowUp(@Valid @RequestBody FollowUpDTO followUp)
+	{
+		logger.info(" --- doResidentOrderFollowUp() --- ");
+		
+		residentOrderBO.setCredentials(provider, followUp.getSegmentName(), followUp.getUserId());
+		
+		ResponseDTO response = residentOrderBO.doResidentOrderFollowUp(followUp);
+		
+		if (!response.getResult())
+	     {  	    		 
+	    	 logger.severe(" unable to do follow up ! "); 
+	     	   
+	     	  return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);		        
+	     }
+   	 	else
+   	 	{
+   	 		return ResponseEntity.ok(response);
+   	 	}
+	}
+	
+}

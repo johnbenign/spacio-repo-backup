@@ -1,0 +1,5 @@
+package com.spacio.fm.core.activity.enums;
+
+public class WorkOrderConstant {
+
+}

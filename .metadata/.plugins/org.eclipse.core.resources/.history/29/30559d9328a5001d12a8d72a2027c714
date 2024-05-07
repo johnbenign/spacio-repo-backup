@@ -1,0 +1,627 @@
+package com.spacio.fm.core.home.dao.impl;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+import javax.jdo.PersistenceManager;
+import javax.servlet.http.HttpServletRequest;
+
+import org.apache.commons.lang.StringUtils;
+import org.opencrx.application.mail.exporter.MailWorkflow;
+import org.opencrx.application.mail.exporter.SendMailWorkflow;
+import org.opencrx.application.mail.importer.MailImporterServlet;
+import org.opencrx.kernel.backend.Base;
+import org.opencrx.kernel.backend.UserHomes;
+import org.opencrx.kernel.generic.SecurityKeys;
+import org.opencrx.kernel.home1.cci2.EMailAccountQuery;
+import org.opencrx.kernel.home1.jmi1.EMailAccount;
+import org.opencrx.kernel.home1.jmi1.UserHome;
+import org.opencrx.security.realm1.jmi1.Principal;
+import org.openmdx.base.exception.ServiceException;
+import org.openmdx.base.naming.Path;
+import org.openmdx.security.realm1.cci2.RealmQuery;
+import org.openmdx.security.realm1.jmi1.Credential;
+import org.openmdx.security.realm1.jmi1.Realm;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
+import org.w3c.spi2.Datatypes;
+import org.w3c.spi2.Structures;
+
+import com.spacio.crm.extension1.activity.bo.ActivityBO;
+import com.spacio.crm.extension1.activity.dto.EmailActivityDTO;
+import com.spacio.crm.extension1.activity.mapper.ActivityMapper;
+import com.spacio.crm.extension1.backend.MailImporterService;
+import com.spacio.crm.extension1.backend.UserService;
+import com.spacio.crm.extension1.jmi1.SendMailParams;
+import com.spacio.crm.extension1.mail.MailImporterServlet2;
+import com.spacio.crm.extension1.util.LicenseConfigUtil;
+import com.spacio.crx.bo.ConnectionManager;
+import com.spacio.crx.dao.impl.GenericDAOImpl;
+import com.spacio.crx.dto.ResponseDTO;
+import com.spacio.crx.util.CRMUtil;
+import com.spacio.fm.core.account.dto.CompanyDTO;
+//import com.spacio.fm.core.bo.ConnectionManager;
+
+import com.spacio.fm.core.home.dao.HomeDAO;
+import com.spacio.fm.core.home.dto.CreateUserDTO;
+import com.spacio.fm.core.home.dto.ResetPasswordDto;
+import com.spacio.fm.core.util.SegmentUtil;
+import com.spacio.fm.home1.dao.NotifyResident;
+import com.spacio.fm.home1.jmi1.CreateUserReturn;
+import com.spacio.fm.home1.jmi1.Segment;
+
+
+@Component("homeDAO")
+public class HomeDAOImpl extends GenericDAOImpl implements HomeDAO
+{
+
+	
+	@Autowired
+	private ConnectionManager conMgr;
+
+	//@Autowired
+	private ResponseDTO response;
+	
+	@Value("${segment}")
+	private String spacioSegment;
+
+    
+    private static final Logger logger = Logger.getLogger(HomeDAOImpl.class.getName());
+    
+	
+    
+    public HomeDAOImpl()
+    {
+    	super();
+    	
+    	logger.info("-- HomeDAOImpl() -- ");
+    	
+    	
+    }
+    
+	@Override
+	public ResponseDTO createFMUser(CreateUserDTO createUser)
+	{
+		//ResponseDTO response = this.response;
+		
+		CreateUserReturn out = null;
+		
+		response = new ResponseDTO();
+		response.setResult(false);
+		
+		try
+		{
+			
+			String segmentName = createUser.getSegmentName();
+			
+			String adminPrincipal = SecurityKeys.ADMIN_PRINCIPAL + "-" + segmentName;
+			
+			pm = conMgr.getPersistenceManager(adminPrincipal);
+			
+			SegmentUtil segmentUtil = new SegmentUtil("CRX", segmentName);
+			
+			Segment fmHomeSegment = segmentUtil.getFMHomeSegment(pm);
+			
+			CompanyDTO company = createUser.getCompanyDTO();
+			
+			com.spacio.fm.home1.jmi1.CreateUserParam in = Structures.create(
+	        		com.spacio.fm.home1.jmi1.CreateUserParam.class,
+	        		Datatypes.member(com.spacio.fm.home1.jmi1.CreateUserParam.Member.adminPrincipalId, createUser.getPrincipalId()),
+	        		Datatypes.member(com.spacio.fm.home1.jmi1.CreateUserParam.Member.createPassword, createUser.getInitialPassword()),
+	        		Datatypes.member(com.spacio.fm.home1.jmi1.CreateUserParam.Member.confirmPassword, createUser.getInitialPasswordVerification()),
+	        		Datatypes.member(com.spacio.fm.home1.jmi1.CreateUserParam.Member.estateId, createUser.getEstateXri()),
+	        		Datatypes.member(com.spacio.fm.home1.jmi1.CreateUserParam.Member.role, createUser.getRole()),
+	        		Datatypes.member(com.spacio.fm.home1.jmi1.CreateUserParam.Member.segmentName, segmentName),
+	        		Datatypes.member(com.spacio.fm.home1.jmi1.CreateUserParam.Member.contact, 
+	        				Structures.create(
+	                				com.spacio.fm.home1.jmi1.ContactT.class,
+	                				Datatypes.member(com.spacio.fm.home1.jmi1.ContactT.Member.firstName, createUser.getFirstName()),
+	                				Datatypes.member(com.spacio.fm.home1.jmi1.ContactT.Member.lastName, createUser.getLastName()),
+	                				Datatypes.member(com.spacio.fm.home1.jmi1.ContactT.Member.email, createUser.getEmailAddress()),
+	                				Datatypes.member(com.spacio.fm.home1.jmi1.ContactT.Member.accountCategory, createUser.getAccountCategories()),
+	                				Datatypes.member(com.spacio.fm.home1.jmi1.ContactT.Member.telephone, createUser.getTelephone())
+	                				)
+	        				),
+	        		Datatypes.member(com.spacio.fm.home1.jmi1.CreateUserParam.Member.company, 
+	        				Structures.create(
+	                				com.spacio.fm.home1.jmi1.CompanyT.class,
+	                				Datatypes.member(com.spacio.fm.home1.jmi1.CompanyT.Member.name, company.getCompanyName()),//required
+	                				Datatypes.member(com.spacio.fm.home1.jmi1.CompanyT.Member.officeAddress, company.getOfficeAddress()),//required
+	                				Datatypes.member(com.spacio.fm.home1.jmi1.CompanyT.Member.officeEmail, company.getCompanyEmail()),//required
+	                				Datatypes.member(com.spacio.fm.home1.jmi1.CompanyT.Member.officePhone, company.getCompanyTelephone()),//required
+	                				Datatypes.member(com.spacio.fm.home1.jmi1.CompanyT.Member.aliasName, company.getCompanyAliasName()),
+	                				Datatypes.member(com.spacio.fm.home1.jmi1.CompanyT.Member.country, company.getCountry()),
+	                				Datatypes.member(com.spacio.fm.home1.jmi1.CompanyT.Member.webAddress, company.getCompanyWebsite())
+	                				)
+	        				),	        		
+	        		Datatypes.member(com.spacio.fm.home1.jmi1.CreateUserParam.Member.newEstate, createUser.getNewEstate()),
+	        		Datatypes.member(com.spacio.fm.home1.jmi1.CreateUserParam.Member.newEstateName, createUser.getNewEstateName()));
+			
+			
+			pm.currentTransaction().begin();
+			
+			out = fmHomeSegment.createFMUser2(in);
+			
+			pm.currentTransaction().commit();
+			
+			if (out == null)
+	        {
+	        	logger.severe("CreateUserReturn object is null");
+	        	
+	        	throw new Exception("CreateUserReturn object is null");
+	        }
+			else
+			{
+				
+				
+				    if  (out.getStatus().getReturnCode() == 0)
+			        {
+			        	response.setResult(true);
+			        	response.setResponse("fm user created successfully");
+			        }
+			        else
+			        {
+			           // throw new Exception((out.getStatus().getReturnParams().get(0)));
+			            
+			            response.setErrors(out.getStatus().getReturnParams());
+			        }
+				
+			}
+	        
+	       
+		}
+		catch(Exception e)
+		{
+			//e.printStackTrace();
+			   
+			
+			List<String> errors = new ArrayList<>();
+			
+			String error = e.getMessage();
+			
+			logger.severe("error: " + error);
+			
+			errors.add(error);
+			
+			response.setErrors(errors);
+			
+			logger.log(Level.SEVERE,"  error trace:  " + e.getMessage(), e);
+			 
+			
+			
+		}
+		finally
+		{
+			if (!pm.isClosed())
+				pm.close();
+		}
+		
+		return response;
+	}
+
+	@Override
+	public ResponseDTO createResidentUser(CreateUserDTO createUser)
+	{
+		
+		logger.info(" -- createResidentUser -- ");
+		
+		//ResponseDTO response = this.response;
+		
+		response = new ResponseDTO();
+		response.setResult(false);
+		
+		com.spacio.crm.extension1.jmi1.CreateUserReturn out = null;
+		
+		try
+		{
+			
+			
+			String segmentName = createUser.getSegmentName();
+			
+			String adminPrincipal = SecurityKeys.ADMIN_PRINCIPAL + "-" + segmentName;
+			
+			logger.info("admin principal : " + adminPrincipal);
+			
+			pm = conMgr.getPersistenceManager(adminPrincipal);
+			
+			SegmentUtil segmentUtil = new SegmentUtil("CRX", segmentName);
+			
+			com.spacio.crm.extension1.jmi1.Segment extensionSegment = segmentUtil.getExtensionSegment(pm);
+			
+			com.spacio.crm.extension1.jmi1.CreateUserParam in = Structures.create(
+					com.spacio.crm.extension1.jmi1.CreateUserParam.class,
+	        		Datatypes.member(com.spacio.crm.extension1.jmi1.CreateUserParam.Member.adminPrincipalId, createUser.getPrincipalId()),
+	        		Datatypes.member(com.spacio.crm.extension1.jmi1.CreateUserParam.Member.estateId, createUser.getEstateXri()),
+	        		Datatypes.member(com.spacio.crm.extension1.jmi1.CreateUserParam.Member.role, createUser.getRole()),
+	        		Datatypes.member(com.spacio.crm.extension1.jmi1.CreateUserParam.Member.segmentName, segmentName),
+	        		Datatypes.member(com.spacio.crm.extension1.jmi1.CreateUserParam.Member.createPassword, createUser.getInitialPassword()),
+	        		Datatypes.member(com.spacio.crm.extension1.jmi1.CreateUserParam.Member.confirmPassword, createUser.getInitialPasswordVerification()),
+	        		Datatypes.member(com.spacio.crm.extension1.jmi1.CreateUserParam.Member.contact, 
+	        				Structures.create(
+	        						com.spacio.crm.extension1.jmi1.ContactT.class,
+	                				Datatypes.member(com.spacio.crm.extension1.jmi1.ContactT.Member.firstName, createUser.getFirstName()),
+	                				Datatypes.member(com.spacio.crm.extension1.jmi1.ContactT.Member.lastName, createUser.getLastName()),
+	                				Datatypes.member(com.spacio.crm.extension1.jmi1.ContactT.Member.email, createUser.getEmailAddress()),
+	                				Datatypes.member(com.spacio.crm.extension1.jmi1.ContactT.Member.accountCategory, createUser.getAccountCategories()),
+	                				Datatypes.member(com.spacio.crm.extension1.jmi1.ContactT.Member.telephone, createUser.getTelephone())
+	                				)
+	        				)
+	        		);
+			
+			out = extensionSegment.createResidentUser4(in);
+			
+			if(out == null)
+	        {
+	        	logger.severe("CreateUserReturn object is null");
+	        	
+	        	throw new Exception("CreateUserReturn object is null");
+	        }
+			else
+			{
+				
+				    if (out.getStatus().getReturnCode() == 0)
+			        {
+			        	response.setResult(true);
+			        	response.setResponse("resident user created successfully");
+			        }
+			        else
+			        {
+			        	 response.setErrors(out.getStatus().getReturnParams());
+			        }
+				
+			}
+	        
+	      
+		}
+		catch(Exception e)
+		{
+			   
+			
+			List<String> errors = new ArrayList<>();
+			
+			String error = e.getMessage();
+			
+			logger.severe("error: " + error);
+			
+			errors.add(error);
+			
+			response.setErrors(errors);
+			
+			 logger.log(Level.SEVERE,"  error trace:  " + e.getMessage(), e);
+				
+			
+			//out = createEstateErrorResponse(errors);
+		}
+		finally
+		{
+			if(!pm.isClosed())
+				pm.close();
+		}
+		
+		return response;
+		
+	}
+	
+	@Override
+	public ResponseDTO sendPasswordLinkReset(String email) {
+		try {
+			response = new ResponseDTO();
+			response = isEmailPresent(email);
+			
+			if(response.getResult()) {
+				try {
+					UserHome recipientUser = (UserHome) response.getResponse();
+					SegmentUtil segmentUtil = new SegmentUtil(providerName, segmentName);
+					org.opencrx.kernel.home1.jmi1.Segment userSegment = segmentUtil.getUserHomeSegment(pm);
+					UserHome userHome = userSegment.getUserHome(userId);
+					response = sendMail(email, recipientUser, userHome);
+					if(!response.getResult())
+						return response;
+					response.setResult(true);
+					response.setErrorCode("00");
+					response.setResponse("Mail sent!");
+					return response;
+				}
+				catch(Exception e) {
+					response.setErrorCode("99");
+					logger.info("error: " + e.getMessage());
+					response.setErrorMsg(e.getMessage());
+					response.setResult(false);
+					e.printStackTrace();
+					return response;
+				}
+			}
+			
+		}
+		catch(Exception e) {
+			response.setErrorCode("99");
+			response.setErrorMsg(e.getMessage());
+			response.setResult(false);
+			return response;
+		}
+		return response;
+	}
+	
+	@Override
+	public ResponseDTO resetPassword(ResetPasswordDto dto) {
+		List<String> errors = new ArrayList<>();
+		try {
+			pm = conMgr.getPersistenceManager("admin-Root");
+			response = new ResponseDTO();
+//			SegmentUtil segmentUtil = new SegmentUtil(providerName, "Root");
+//			org.opencrx.kernel.home1.jmi1.Segment userSegment = segmentUtil.getUserHomeSegment(pm);
+//			UserHome userHome = userSegment.getUserHome(userId);
+//			if(userHome == null) {
+//				logger.info("User not found");
+//				response.setErrorCode("99");
+//				response.setErrorMsg("User not found");
+//				response.setResult(false);
+//				return response;
+//			}
+			UserService userService = UserService.getInstance();
+			userService.setPm(pm);
+			Principal principal = userService.getPrincipal(dto.getUserId(), null, errors);
+			if(!errors.isEmpty()) {
+				response.setErrorCode("99");
+				response.setErrorMsg("" + errors);
+				response.setResult(false);
+				conMgr.closePM(pm);
+				logger.info("error: " + errors);
+				return response;
+			}
+			if(principal != null) {
+				Credential credential = principal.getCredential();
+				if(credential == null) {
+					logger.info("No credentials found for this user");
+					response.setErrorCode("99");
+					response.setErrorMsg("No credentials found for this user");
+					response.setResult(false);
+					conMgr.closePM(pm);
+					return response;
+				}
+                if(!(credential instanceof org.openmdx.security.authentication1.jmi1.Password))
+                {
+                    logger.info("Credential is not an instance of Password");
+                    response.setErrorCode("99");
+                    response.setResult(false);
+                    response.setErrorMsg("Credential not an instance of Password!");
+                    conMgr.closePM(pm);
+                    return response;
+                }
+                if(!StringUtils.equals(dto.getNewPasword(), dto.getConfirmPassword())) {
+                	logger.info("Password mismatch!");
+                	response.setErrorCode("99");
+                	response.setErrorMsg("Password mismatch");
+                	response.setResult(false);
+                	conMgr.closePM(pm);
+                	return response;
+                }
+                org.openmdx.security.authentication1.jmi1.Password passwordCredential = (org.openmdx.security.authentication1.jmi1.Password)credential;
+                UserHomes userHomes = UserHomes.getInstance();
+                Short result = userHomes.changePassword(passwordCredential, null, dto.getNewPasword());
+                switch(result)
+                {
+                    case 0:
+                        logger.info("Password change successful!");
+                        response.setErrorCode("00");
+                        response.setResult(true);
+                        conMgr.closePM(pm);
+                        return response;
+                    case 1:
+                        logger.info("New password missing!");
+                        response.setErrorMsg("New password missing!");
+                        conMgr.closePM(pm);
+                        return response;
+                    case 5:
+                        logger.info("Cannot change password!");
+                        response.setErrorMsg("Cannot change password, try again!");
+                        conMgr.closePM(pm);
+                        return response;
+                    case 7:
+                        logger.info("Old password mismatch!");
+                        response.setErrorMsg("Old password mismatch");
+                        conMgr.closePM(pm);
+                        return response;
+                    default:
+                        logger.info("Something went wrong!");
+                        response.setErrorMsg("Something went wrong!");
+                        conMgr.closePM(pm);
+                        return response;
+                }
+			}
+			
+		}
+		catch(Exception e) {
+			response.setErrorCode("99");
+			logger.info("error: "  + e.getMessage());
+			response.setErrorMsg(e.getMessage());
+			response.setResult(false);
+			response.setResponse(e);
+			e.printStackTrace();
+			return response;
+		}
+		finally {
+			conMgr.closePM(pm);
+		}
+		return response;
+	}
+	
+	private ResponseDTO sendMail(String userEmail, UserHome userHome,  UserHome userSpacioHome) throws ServiceException {
+		List<String> errors = new ArrayList<>();
+		UserService userService = UserService.getInstance();
+		userService.setPm(pm);
+		List<String> recipientsCc = new ArrayList<String>();
+        List<String> recipientsBcc = new ArrayList<String>();
+        String subject = "FORGOT PASSWORD";
+        String body = String.format("Hi " + userEmail + "\n<a href=\"http://132.145.58.252/reset/%s\">Click this link</a> to reset your password", CRMUtil.getQualifier(userHome.getIdentity()));
+        String from = LicenseConfigUtil.spacioOutboundMail;
+        String operatorId = userId;
+        logger.info(" operator id: " + operatorId);
+        List<String> recipientsTo = new ArrayList<String>();
+        logger.info("errors:::: " + errors);
+        recipientsTo.add(userEmail);
+        
+        Boolean isSent = userService.sendMail(
+        		subject,
+        		body,
+        		from,
+        		recipientsTo,
+        		recipientsCc,
+        		recipientsBcc,
+        		operatorId,
+        		errors
+        		);
+        logger.info("isSent:::" + isSent + ";;;;;errors::::" + errors);
+        if(!isSent || !errors.isEmpty()) {
+        	logger.info(""+errors);
+        	response.setErrorCode("99");
+        	response.setErrorMsg(""+errors);
+        	response.setResult(false);
+        	return response;
+        }
+        return response;
+	}
+	
+//	private void sendMail(String userEmail, UserHome userHome,  UserHome userSpacioHome) throws ServiceException {
+//		ActivityBO activityBO = new ActivityBO();
+//		
+//        activityBO.setPm(pm);
+//        activityBO.setUserId(userId);
+//        activityBO.setSegmentName(segmentName);
+//        String outboundEmailUser = LicenseConfigUtil.spacioOutboundMail;
+//        EmailActivityDTO emailActivity = generateEmailActivity(userEmail, CRMUtil.getQualifier(userHome.getIdentity()));
+//        activityBO.sendMail2(emailActivity, outboundEmailUser);   // should run in a separate thread
+//        logger.info(" outcome: " + response.getResult());
+//     
+//	}
+	
+	private EmailActivityDTO generateEmailActivity(String userEmail, String userId)
+	 {
+	        logger.info(" ------------   getUserWelcomeEmail() ---------- ");
+	        
+	        EmailActivityDTO emailActivityDTO = new EmailActivityDTO();
+	        
+	        String description = String.format("Hi " + userEmail + "\n<a href=\"http://132.145.58.252/reset/%s\">Click this link</a> to reset your password", userId);
+	        
+	        String emailCreatorName = ActivityMapper.ACTIVITY_TYPE_NAME_EMAILS;
+	        emailActivityDTO.setSubject("FORGOT PASSWORD");
+	        emailActivityDTO.setText(description);
+	        emailActivityDTO.setEmailCreatorName(emailCreatorName);
+	        emailActivityDTO.setTo(userEmail);
+	        emailActivityDTO.setFrom(LicenseConfigUtil.spacioOutboundMail);
+	        
+	        
+	        return emailActivityDTO;
+	    }
+	
+//	private void sendMail(String toUser, UserHome userHome) throws ServiceException {
+//		String name = "FORGOT PASSWORD";
+//		String description = String.format("Hi " + toUser + "\n<a href=\"http://132.145.58.252/reset/%s\">Click this link</a> to reset your password", toUser);
+//		short importance = 2;
+//		Base.getInstance()
+//		.sendAlert(
+//				userHome,
+//				toUser,
+//				name,
+//				description,
+//				importance,
+//				0,
+//				null);
+//	}
+
+	private ResponseDTO isEmailPresent(String emailAddress){
+		pm = conMgr.getPersistenceManager("admin-Root");
+		List<Realm> realms = fetchRealms();
+		int count = realms.size();
+		logger.info(" realms size: " + count);
+		if (count == 0){
+			response.setErrorMsg("realm not found! ");
+			response.setErrorCode("99");
+			response.setResult(false);
+			logger.info("realm not found! ");
+			return response;
+		}
+		for(Realm realm : realms) {
+			String realmName = realm.getName();
+			SegmentUtil segmentUtil = new SegmentUtil(providerName, realmName);
+			List<org.opencrx.security.realm1.jmi1.Principal> principals = fetchPrincipals(realm);
+			for(org.opencrx.security.realm1.jmi1.Principal principal : principals) {
+				String userId = CRMUtil.getQualifier(principal.getIdentity());
+				logger.info("the userid: " + userId);
+				org.opencrx.kernel.home1.jmi1.Segment userSegment = segmentUtil.getUserHomeSegment(pm);
+				if(userSegment == null) {
+					response.setErrorMsg("Unable to get user segment...");
+					response.setErrorCode("99");
+					response.setResult(false);
+					logger.info("Unable to get user segment...");
+					return response;
+				}
+				UserHome userHome = userSegment.getUserHome(userId);
+				if (userHome != null) {
+					logger.info("user found!");
+					EMailAccountQuery query = (EMailAccountQuery) pm.newQuery(EMailAccount.class);
+					query.name().equalTo(emailAddress);
+					List<EMailAccount> emailAccounts = fetchEmailAccounts(userHome, emailAddress);
+					if(emailAccounts != null) {
+						if(!emailAccounts.isEmpty()) {
+							logger.info("email address exists!");
+							response.setErrorCode("00");
+							response.setResult(true);
+							response.setResponse(userHome);
+							return response;
+						}
+					}
+					else {
+						logger.info("email Aaccount is null!");
+						response.setErrorMsg("email account is null!");
+						response.setErrorCode("99");
+						response.setResult(false);
+						return response;
+					}
+				}
+				else
+				{
+					logger.info(" User not found...!!!");
+					response.setErrorMsg(" User not found ...!!!");
+					response.setErrorCode("99");
+					response.setResult(false);
+					return response;
+				}
+			}
+		}
+		response.setErrorCode("99");
+		response.setErrorMsg("Email does not exists!");
+		response.setResult(false);
+		logger.info("Email does not exist");
+		return response;
+	 }
+
+	private List<EMailAccount> fetchEmailAccounts(UserHome userHome, String emailAddress) {
+		EMailAccountQuery query = (EMailAccountQuery) pm.newQuery(EMailAccount.class);
+		query.name().equalTo(emailAddress);
+		return userHome.getEMailAccount(query);
+	}
+
+	private List<Principal> fetchPrincipals(Realm realm) {
+		org.opencrx.security.realm1.cci2.PrincipalQuery principalQuery = (org.opencrx.security.realm1.cci2.PrincipalQuery) pm.newQuery(org.opencrx.security.realm1.jmi1.Principal.class);
+		principalQuery.orderByName().ascending();
+		principalQuery.forAllDisabled().isFalse();
+		return realm.getPrincipal(principalQuery);
+	}
+
+	private List<Realm> fetchRealms() {
+		org.openmdx.security.realm1.jmi1.Segment realmSegment =
+				(org.openmdx.security.realm1.jmi1.Segment)pm.getObjectById(
+						new Path("xri://@openmdx*org.openmdx.security.realm1/provider/CRX/segment/Root"));
+		RealmQuery realmQuery = 
+				(RealmQuery)pm.newQuery(Realm.class);
+
+		realmQuery.name().notEqualTo("Root");
+		realmQuery.name().notEqualTo("Default");
+		return realmSegment.getRealm(realmQuery);
+	}
+
+}

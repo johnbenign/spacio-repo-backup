@@ -1,0 +1,939 @@
+package com.spacio.fm.core.activity.dao.impl;
+
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.logging.Logger;
+
+import org.opencrx.kernel.activity1.cci2.ActivityTrackerQuery;
+import org.opencrx.kernel.activity1.cci2.ActivityTypeQuery;
+import org.opencrx.kernel.activity1.jmi1.Activity;
+import org.opencrx.kernel.activity1.jmi1.ActivityTracker;
+import org.opencrx.kernel.activity1.jmi1.ActivityType;
+import org.openmdx.base.dataprovider.layer.persistence.jdbc.spi.Database_1_Attributes;
+import org.openmdx.base.naming.Path;
+import org.openmdx.base.persistence.cci.PersistenceHelper;
+import org.openmdx.base.rest.cci.QueryExtensionRecord;
+import org.openmdx.kernel.exception.BasicException;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+import org.w3c.spi2.Datatypes;
+import org.w3c.spi2.Structures;
+
+import com.spacio.crm.extension1.dto.SegmentConfigDTO;
+import com.spacio.crm.extension1.jmi1.ReturnStatusT;
+import com.spacio.crx.bo.ConnectionManager;
+import com.spacio.crx.dao.impl.GenericDAOImpl;
+import com.spacio.crx.dto.ResponseDTO;
+import com.spacio.fm.core.activity.dao.WorkOrderDAO;
+import com.spacio.fm.core.activity.dto.CreateWorkOrderDTO;
+import com.spacio.fm.core.activity.dto.FollowUpDTO;
+import com.spacio.fm.core.activity.dto.WorkOrderDTO;
+import com.spacio.fm.core.activity.dto.WorkOrderFollowUpDTO;
+import com.spacio.fm.core.activity.dto.WorkOrderListDTO;
+import com.spacio.fm.core.activity.enums.WorkOrderConstant;
+import com.spacio.fm.core.activity.mapper.WorkOrderMapper;
+import com.spacio.fm.core.util.SegmentUtil;
+import com.spacio.fm.core.util.SpacioFmUtil;
+
+@Component
+public class WorkOrderDAOImpl extends GenericDAOImpl implements WorkOrderDAO
+{
+	private static final Logger logger = Logger.getLogger(WorkOrderDAOImpl.class.getName());
+	
+	public static final String ACTIVITY_TYPE_NAME_WO_TASKS = "Work Order Project Tasks";
+		
+	@Autowired
+	private ConnectionManager conMgr;
+
+	@Override
+	public ResponseDTO createWorkOrder(CreateWorkOrderDTO workOrder)
+	{
+		logger.info(" --- about to create work order --- ");
+		
+		ResponseDTO response = new ResponseDTO();
+		
+		try
+		{
+			pm = conMgr.getPersistenceManager(userId);
+			
+			SegmentUtil segmentUtil = new SegmentUtil(providerName, segmentName);
+			
+			com.spacio.crm.extension1.jmi1.Segment extensionSegment = segmentUtil.getExtensionSegment(pm);
+			
+			com.spacio.crm.extension1.jmi1.CreateWorkOrderParams in = Structures.create(
+					com.spacio.crm.extension1.jmi1.CreateWorkOrderParams.class,
+	        		Datatypes.member(com.spacio.crm.extension1.jmi1.CreateWorkOrderParams.Member.description, workOrder.getDescription()),
+	        		Datatypes.member(com.spacio.crm.extension1.jmi1.CreateWorkOrderParams.Member.trackerType, (short)0),
+	        		Datatypes.member(com.spacio.crm.extension1.jmi1.CreateWorkOrderParams.Member.name, workOrder.getName())
+	        		
+					);
+			
+			SegmentConfigDTO.provider = providerName;
+			SegmentConfigDTO.segment = segmentName;
+			SegmentConfigDTO.currentUser = userId;
+			
+			
+			pm.currentTransaction().begin();
+			
+			com.spacio.crm.extension1.jmi1.CreateWorkOrderResult out = extensionSegment.createWorkOrder(in);
+			
+			pm.currentTransaction().commit();
+			
+			if(out.isResult())
+			{
+				ActivityTracker tracker = null;
+				
+				try
+				{
+					tracker = (ActivityTracker) pm.getObjectById(new Path(out.getTrackerXri()));
+				}
+				catch(Exception e)
+				{
+					logger.severe(" --- no tracker found with the given xri --- ");
+					
+					response.setErrorMsg("no tracker found with the given xri");
+					response.setResponse("no tracker found with the given xri");
+					response.setResult(false);
+					
+					return response;
+				}
+				
+				response = createWorkOrderTasks(workOrder.getWorkOrderTasks(), tracker.getIdentity());
+				
+				if(!response.getResult())
+				{
+					logger.severe(" --- error: " + response.getErrorMsg());
+					
+					return response;
+				}
+				
+//				String reportingContactXri = tracker.getMainActivity().getReportingContact().getIdentity();
+//				
+//				String reportingCompanyXri = tracker.getMainActivity().getReportingAccount().getIdentity();
+//				
+//				String assignedToXri = tracker.getMainActivity().getAssignedTo().getIdentity();
+//				
+//				for(String workOrderTask : workOrder.getWorkOrderTasks())
+//				{
+//					com.spacio.crm.extension1.jmi1.CreateTicketParams in2 = Structures.create(
+//							com.spacio.crm.extension1.jmi1.CreateTicketParams.class,
+//	                        Datatypes.member(com.spacio.crm.extension1.jmi1.CreateTicketParams.Member.activityCreatorXri, out.getDefaultActivityCreatorXri()),                                     
+//	                        Datatypes.member(com.spacio.crm.extension1.jmi1.CreateTicketParams.Member.name, workOrderTask),
+//	                        Datatypes.member(com.spacio.crm.extension1.jmi1.CreateTicketParams.Member.reportingAccountXri, reportingCompanyXri),
+//	                        Datatypes.member(com.spacio.crm.extension1.jmi1.CreateTicketParams.Member.reportingContactXri, reportingContactXri),
+//	                        Datatypes.member(com.spacio.crm.extension1.jmi1.CreateTicketParams.Member.assignedToXri, assignedToXri),
+//	                        Datatypes.member(com.spacio.crm.extension1.jmi1.CreateTicketParams.Member.operatorPriority, tracker.getMainActivity().getPriority()),
+//	                        Datatypes.member(com.spacio.crm.extension1.jmi1.CreateTicketParams.Member.problemDescription, tracker.getMainActivity().getDescription()),
+//	                        Datatypes.member(com.spacio.crm.extension1.jmi1.CreateTicketParams.Member.channel, null),   
+//	                        Datatypes.member(com.spacio.crm.extension1.jmi1.CreateTicketParams.Member.category, tracker.getIdentity()),                                             
+//	                        Datatypes.member(com.spacio.crm.extension1.jmi1.CreateTicketParams.Member.dueBy, tracker.getMainActivity().getDueBy()),
+//	                        Datatypes.member(com.spacio.crm.extension1.jmi1.CreateTicketParams.Member.scheduledStart, tracker.getMainActivity().getScheduledStart()),
+//	                        Datatypes.member(com.spacio.crm.extension1.jmi1.CreateTicketParams.Member.scheduledEnd, tracker.getMainActivity().getScheduledEnd()),
+//	                        Datatypes.member(com.spacio.crm.extension1.jmi1.CreateTicketParams.Member.operatorId, userId)
+//			        		
+//							);
+//					
+//					pm.currentTransaction().begin();
+//					
+//					com.spacio.crm.extension1.jmi1.CreateTicketResult out2 = extensionSegment.createTicket(in2);
+//					
+//					pm.currentTransaction().commit();
+//					
+//					if(out2.isResult())
+//					{
+//						
+//					}
+//				}
+				
+				response.setResult(true);
+				response.setResponse(out.getTrackerXri());
+				
+				logger.info(" --- work order have been created successfully!!! ---");
+			}
+			else
+			{
+				response.setErrorMsg(out.getErrorMsg());
+				response.setResponse(out.getErrorMsg());
+				
+				return response;
+			}
+		}
+		catch(Exception e)
+		{
+			logger.info(" --- error: " + e.getMessage() + e);
+			
+			//e.printStackTrace();
+			
+			response.setErrorMsg(e.getMessage());
+			response.setResponse(e);
+			response.setResult(false);
+		}
+		finally
+		{
+			if(!pm.isClosed())
+				pm.close();
+		}
+		
+		return response;
+	}
+	
+	
+
+	@Override
+	public ResponseDTO getAllWorkOrders(WorkOrderConstant status)
+	{
+		logger.info(" --- get all work orders --- ");
+		
+		ResponseDTO response = new ResponseDTO();
+		
+		try
+		{
+			List<WorkOrderListDTO> workOrderLists = new ArrayList<>();
+			
+//			if(activityTypeId == null)
+//			{
+//				logger.severe(" --- no activity type id supplied --- ");
+//				 
+//				response.setErrorMsg("no activity type id supplied");
+//				response.setResponse("no activity type id supplied");
+//				response.setResult(false);
+//				
+//				return response;
+//			}
+			
+			pm = conMgr.getPersistenceManager(userId);
+			
+			SegmentUtil segmentUtil = new SegmentUtil(providerName, segmentName);
+			
+			org.opencrx.kernel.activity1.jmi1.Segment activitySegment = segmentUtil.getActivitySegment(pm);
+			
+			ActivityTypeQuery activityTypeQuery = (ActivityTypeQuery) pm.newQuery(ActivityType.class);
+			
+			activityTypeQuery.name().equalTo(ACTIVITY_TYPE_NAME_WO_TASKS);
+			activityTypeQuery.orderByModifiedAt().descending();
+			
+			List<ActivityType> activityTypes = activitySegment.getActivityType(activityTypeQuery);
+			
+			if(activityTypes.isEmpty())
+			{
+				logger.info(" --- no activity type found with the given name, please contact admin --- ");
+				
+				response.setErrorMsg("no activity type found with the given name, please contact administrator");
+				response.setResponse("no activity type found with the given name, please contact administrator");
+				response.setResult(false);
+				
+				return response;
+			}
+			
+			logger.info(" ---  getting the activity type ---- ");
+			
+			ActivityType activityType = activityTypes.get(0);
+						
+//			if(activityType == null)
+//			{
+//				logger.info(" no activity type found with the given id ");
+//				response.setErrorMsg("no activity type found with the given id");
+//				response.setResponse("no activity type found with the given id");
+//				response.setResult(false);
+//				
+//				return response;
+//			}
+			
+//			try
+//			{
+//				logger.info(" ---  getting the activity type ---- ");
+//				
+//				activityType = (ActivityType) pm.getObjectById(new Path(activityTypeXri));
+//			}
+//			catch(Exception ex)
+//			{
+//				logger.info(" --- no activity type found with the given xri --- ");
+//				
+//				throw new ServiceException(ex);
+//			}
+			
+			ActivityTrackerQuery query = (ActivityTrackerQuery) pm.newQuery(ActivityTracker.class);
+			
+			query.orderByModifiedAt().descending();
+			query.thereExistsDefaultCreator().thereExistsActivityType().equalTo(activityType);
+			
+			List<ActivityTracker> trackers = activitySegment.getActivityTracker(query);
+			
+			WorkOrderMapper mapper = new WorkOrderMapper();
+			
+			for(ActivityTracker tracker : trackers)
+			{
+				WorkOrderListDTO workOrderList = mapper.getWorkOrderList(tracker);
+				//tracker.setMa
+				workOrderLists.add(workOrderList);
+			}
+			
+			response.setResponse(workOrderLists);
+			response.setResult(true);
+			
+			logger.info(" --- all work order list fetched --- ");
+		}
+		catch(Exception e)
+		{
+			logger.severe("error: " + e.getMessage());
+			
+			response.setErrorMsg(e.getMessage());
+			response.setResponse(e.getMessage());
+			response.setResult(false);
+			
+			//e.printStackTrace();
+		}
+		finally
+		{
+			if(!pm.isClosed())
+				pm.close();
+		}
+		
+		return response;
+	}
+
+	@Override
+	public ResponseDTO getAllWorkOrders(int index, int range)
+	{
+		logger.info(" --- get all work orders --- ");
+		
+		ResponseDTO response = new ResponseDTO();
+		
+		try
+		{
+			List<WorkOrderListDTO> workOrderLists = new ArrayList<>();
+			
+//			if(activityTypeId == null)
+//			{
+//				logger.severe(" --- no activity type id supplied --- ");
+//				
+//				response.setErrorMsg("no work order id supplied");
+//				response.setResponse("no work order id supplied");
+//				response.setResult(false);
+//				
+//				return response;
+//			}
+			
+			pm = conMgr.getPersistenceManager(userId);
+			
+			SegmentUtil segmentUtil = new SegmentUtil(providerName, segmentName);
+			
+			org.opencrx.kernel.activity1.jmi1.Segment activitySegment = segmentUtil.getActivitySegment(pm);
+			
+			ActivityTypeQuery activityTypeQuery = (ActivityTypeQuery) pm.newQuery(ActivityType.class);
+			
+			activityTypeQuery.name().equalTo(ACTIVITY_TYPE_NAME_WO_TASKS);
+			activityTypeQuery.orderByModifiedAt().descending();
+			
+			List<ActivityType> activityTypes = activitySegment.getActivityType(activityTypeQuery);
+			
+			if(activityTypes.isEmpty())
+			{
+				logger.info(" --- no activity type found with the given name, please contact admin --- ");
+				
+				response.setErrorMsg("no activity type found with the given name, please contact administrator");
+				response.setResponse("no activity type found with the given name, please contact administrator");
+				response.setResult(false);
+				
+				return response;
+			}
+			
+			logger.info(" ---  getting the activity type ---- ");
+			
+			ActivityType activityType = activityTypes.get(0);
+									
+//			if(activityType == null)
+//			{
+//				logger.severe(" --- no activity type found with the given id --- ");
+//				
+//				response.setErrorMsg("no work order found with the given id");
+//				response.setResponse("no work order found with the given id");
+//				response.setResult(false);
+//				
+//				return response;
+//			}
+			
+//			try
+//			{
+//				logger.info(" ---  getting the activity type ---- ");
+//				
+//				activityType = (ActivityType) pm.getObjectById(new Path(activityTypeXri));
+//			}
+//			catch(Exception ex)
+//			{
+//				logger.info(" --- no activity type found with the given xri --- ");
+//				
+//				throw new ServiceException(ex);
+//			}
+			
+			ActivityTrackerQuery query = (ActivityTrackerQuery) pm.newQuery(ActivityTracker.class);
+			
+			query.orderByModifiedAt().descending();
+			query.thereExistsDefaultCreator().thereExistsActivityType().equalTo(activityType);
+			
+			List<ActivityTracker> trackers = activitySegment.getActivityTracker(query);
+			
+			WorkOrderMapper mapper = new WorkOrderMapper();
+			
+			int count = 0;
+			
+			for(Iterator<ActivityTracker> i = trackers.listIterator(index); i.hasNext();)
+			{
+				ActivityTracker tracker = i.next();
+				
+				WorkOrderListDTO workOrderList = mapper.getWorkOrderList(tracker);
+				
+				workOrderLists.add(workOrderList);
+				
+				count++;
+				
+				logger.info("range count: " + count);
+				
+	            if(count > range)
+	            {
+	                break;
+	            }
+			}
+			
+			response.setResponse(workOrderLists);
+			response.setResult(true);
+			
+			logger.info(" --- all work orders with range fetched --- ");
+		}
+		catch(Exception e)
+		{
+			logger.severe("error: " + e.getMessage());
+			
+			response.setErrorMsg(e.getMessage());
+			response.setResponse(e.getMessage());
+			
+			response.setResult(false);
+			
+			//e.printStackTrace();
+		}
+		finally
+		{
+			if(!pm.isClosed())
+				pm.close();
+		}
+		
+		return response;
+	}
+
+	@Override
+	public int getAllWorkOrdersSize()
+	{
+		logger.info(" --- get all work orders size--- ");
+		
+		int count = 0;
+		
+		try
+		{
+			pm = conMgr.getPersistenceManager(userId);
+			
+			SegmentUtil segmentUtil = new SegmentUtil(providerName, segmentName);
+			
+			org.opencrx.kernel.activity1.jmi1.Segment activitySegment = segmentUtil.getActivitySegment(pm);
+			
+			ActivityTypeQuery activityTypeQuery = (ActivityTypeQuery) pm.newQuery(ActivityType.class);
+			
+			activityTypeQuery.name().equalTo(ACTIVITY_TYPE_NAME_WO_TASKS);
+			activityTypeQuery.orderByModifiedAt().descending();
+			
+			List<ActivityType> activityTypes = activitySegment.getActivityType(activityTypeQuery);
+			
+			if(activityTypes.isEmpty())
+			{
+				logger.info(" --- no activity type found with the given name, please contact admin --- ");
+				
+				return 0;
+			}
+			
+			logger.info(" ---  getting the activity type ---- ");
+			
+			ActivityType activityType = activityTypes.get(0);
+						
+//			if(activityType == null)
+//			{
+//				logger.severe(" --- no activity type found with the given id --- ");
+//				
+//				return 0;
+//			}
+			
+			ActivityTrackerQuery query = (ActivityTrackerQuery) pm.newQuery(ActivityTracker.class);
+			
+			query.orderByModifiedAt().descending();
+			query.thereExistsDefaultCreator().thereExistsActivityType().equalTo(activityType);
+			QueryExtensionRecord queryExtension = PersistenceHelper.newQueryExtension(query);
+	        queryExtension.setClause(Database_1_Attributes.HINT_COUNT + "(1=1)");
+			
+			List<ActivityTracker> trackers = activitySegment.getActivityTracker(query);
+			
+			count = trackers.size();
+			
+			logger.info(" all work orders count: " + count);
+		}
+		catch(Exception e)
+		{
+			logger.severe("error: " + e.getMessage() + e.getCause());
+			
+			//e.printStackTrace();
+		}
+		finally
+		{
+			if(!pm.isClosed())
+				pm.close();
+		}
+		
+		return count;
+	}
+
+	@Override
+	public ResponseDTO updateWorkOrder(WorkOrderDTO workOrder)
+	{
+		logger.info(" --- about to update work order --- ");
+		
+		ResponseDTO response = new ResponseDTO();
+		
+		try
+		{
+			pm = conMgr.getPersistenceManager(userId);
+			
+			SegmentUtil segmentUtil = new SegmentUtil(providerName, segmentName);
+			
+			org.opencrx.kernel.activity1.jmi1.Segment activitySegment = segmentUtil.getActivitySegment(pm);
+			
+			ActivityTracker activityTracker = activitySegment.getActivityTracker(workOrder.getKey().getUuid());
+			
+			if(activityTracker == null)
+			{
+				logger.severe(" --- no activity tracker found with the given id --- ");
+				
+				response.setErrorMsg("no work order found with the given id");
+				response.setResponse("no work order found with the given id");
+				response.setResult(false);
+				
+				return response;
+			}
+			
+			WorkOrderMapper mapper = new WorkOrderMapper();
+						
+			pm.currentTransaction().begin();
+			
+			activityTracker = mapper.editWorkOrder(workOrder, activityTracker, pm);
+			
+			pm.currentTransaction().commit();
+			
+			response.setResult(true);
+			response.setResponse(activityTracker.getIdentity());
+			
+			logger.info(" --- work order edited successfully! --- ");
+				
+		}
+		catch(Exception e)
+		{
+			logger.severe(" --- error: " + e.getMessage() + e);
+			//e.printStackTrace();
+			response.setErrorMsg(e.getMessage());
+			response.setResponse(e);
+			response.setResult(false);
+		}
+		finally
+		{
+			if(!pm.isClosed())
+				pm.close();
+		}
+		
+		return response;
+	}
+
+	@Override
+	public ResponseDTO getWorkOrder(String workOrderId)
+	{
+		logger.info(" --- about to get work order by id --- ");
+		
+		ResponseDTO response = new ResponseDTO();
+		
+		try
+		{
+			WorkOrderDTO workOrder = new WorkOrderDTO();
+			
+			if(workOrderId == null)
+			{
+				logger.severe(" --- no workOrder Id supplied --- ");
+				
+				response.setErrorMsg("no workOrder Id supplied");
+				response.setResponse("no workOrder Id supplied");
+				response.setResult(false);
+				
+				return response;
+			}
+			
+			pm = conMgr.getPersistenceManager(userId);
+			
+			SegmentUtil segmentUtil = new SegmentUtil(providerName, segmentName);
+			
+			org.opencrx.kernel.activity1.jmi1.Segment activitySegment = segmentUtil.getActivitySegment(pm);
+			
+			ActivityTracker tracker = activitySegment.getActivityTracker(workOrderId);
+			
+			if(tracker == null)
+			{
+				logger.severe(" --- no tracker found with the given id --- ");
+				response.setErrorMsg(" no work order found with the given id ");
+				response.setResponse("no work order found with the given id");
+				response.setResult(false);
+				return response;
+			}
+			
+//			try
+//			{
+//				tracker = (ActivityTracker) pm.getObjectById(new Path(workOrderXri));
+//			}
+//			catch(Exception ex)
+//			{
+//				logger.severe("error: no work order found with the given id; " + ex.getMessage());
+//				
+//				throw new JDOObjectNotFoundException("no work order found with the given id");
+//			}
+			
+			WorkOrderMapper mapper = new WorkOrderMapper();
+			
+			workOrder = mapper.getWorkOrder(tracker);
+			
+			response.setResponse(workOrder);
+			response.setResult(true);
+			 
+			logger.info(" --- work order fetched --- ");
+		}
+		catch(Exception e)
+		{
+			logger.severe("error: " + e.getMessage());
+			
+			response.setErrorMsg(e.getMessage());
+			response.setResponse(e.getMessage());
+			response.setResult(false);
+		}
+		finally
+		{
+			if(!pm.isClosed())
+				pm.close();
+		}
+		
+		return response;
+	}
+
+	@Override
+	public ResponseDTO doWorkOrderFollowUp(WorkOrderFollowUpDTO followUp)
+	{
+		logger.info(" --- about to do follow up --- ");
+		
+		ResponseDTO response = new ResponseDTO();
+		
+		com.spacio.crm.extension1.jmi1.WorkOrderFollowUpResult out = null;
+		
+		try
+		{
+			pm = conMgr.getPersistenceManager(userId);
+			
+			SegmentUtil segmentUtil = new SegmentUtil("CRX", segmentName);
+			
+			com.spacio.crm.extension1.jmi1.Segment extensionSegment = segmentUtil.getExtensionSegment(pm);
+			
+			ActivityTracker tracker = null;
+			
+			try
+			{
+				tracker = (ActivityTracker) pm.getObjectById(new Path(followUp.getWorkOrderXri()));
+			}
+			catch(Exception e)
+			{
+				logger.severe(" --- no work order found with the given id --- ");
+				response.setErrorMsg("no work order found with the given id");
+				response.setResponse("no work order found with the given id");
+				response.setResult(false);
+				
+				return response;
+			}
+			
+			Activity activity = tracker.getMainActivity();
+			
+			if(activity == null)
+			{
+				logger.severe(" --- no activity assigned to this tracker --- ");
+				
+				response.setErrorMsg("no activity assigned to this tracker");
+				response.setResponse("no activity assigned to this tracker");
+				response.setResult(false);
+				
+				return response;
+			}
+			
+			String activityXri = activity.getIdentity();
+			
+			com.spacio.crm.extension1.jmi1.WorkOrderFollowUpParams in = Structures.create(
+					com.spacio.crm.extension1.jmi1.WorkOrderFollowUpParams.class,
+	        		Datatypes.member(com.spacio.crm.extension1.jmi1.WorkOrderFollowUpParams.Member.activityUri, activityXri),
+	        		Datatypes.member(com.spacio.crm.extension1.jmi1.WorkOrderFollowUpParams.Member.category, followUp.getCategory()),
+	        		Datatypes.member(com.spacio.crm.extension1.jmi1.WorkOrderFollowUpParams.Member.description, followUp.getDescription()),
+	        		Datatypes.member(com.spacio.crm.extension1.jmi1.WorkOrderFollowUpParams.Member.followUpContactXri, followUp.getFollowUpContactXri()),
+	        		Datatypes.member(com.spacio.crm.extension1.jmi1.WorkOrderFollowUpParams.Member.name, followUp.getName()),
+//	        		Datatypes.member(com.spacio.crm.extension1.jmi1.CreateEstateActivityParams.Member.scheduledEnd, new Date()),
+	        		Datatypes.member(com.spacio.crm.extension1.jmi1.WorkOrderFollowUpParams.Member.transitionName, followUp.getTransitionName())
+					);
+			
+			pm.currentTransaction().begin();
+			
+			out = extensionSegment.workOrderFollowUp(in);
+			
+			pm.currentTransaction().commit();
+		
+            if (out == null)
+                logger.fine(" null response. ");
+              else
+                logger.fine(" response is not null. content: " + out.toString());
+              
+              
+             // logger.fine(" result: " + out.isResult() + " errorcode: " + out.getErrorCode() + " reason: " + out.getErrorMsg());
+            
+             ReturnStatusT outcome = out.getStatus();
+             
+               if (outcome.getReturnCode() == BasicException.Code.NONE) 
+               {
+                  logger.info(" ticket follow up successful ! ");
+                   response.setResult(true);
+                   response.setResponse(out.getFollowUp());
+                              
+                   logger.fine(" commit ! ");
+               }
+               else
+               {                 
+                   logger.severe(" error with ticket follow up. code: " + outcome.getReturnParams());            
+                    
+                    response.setErrors(outcome.getReturnParams());
+                    response.setResult(false);
+                 
+                   logger.fine(" rollback ! ");             
+               }
+		
+		}
+		catch(Exception e)
+		{
+			logger.info(" --- error: " + e.getMessage() + e);
+			
+			//e.printStackTrace();
+			
+			response.setErrorMsg(e.getMessage());
+			response.setResponse(e);
+			response.setResult(false);
+		}
+		finally
+		{
+			if(!pm.isClosed())
+				pm.close();
+		}
+		
+		return response;
+	}
+
+
+
+	@Override
+	public ResponseDTO createWorkOrderTasks(List<String> workOrderTasks, String workOrderXri)
+	{
+		logger.info(" --- about to create work order tasks --- ");
+		
+		ResponseDTO response = new ResponseDTO();
+		
+		List<String> workOrderTaskXris = new ArrayList<>();
+		
+		try
+		{
+			pm = conMgr.getPersistenceManager(userId);
+			
+			if(workOrderXri == null)
+			{
+				logger.severe(" --- no work order xri supplied --- ");
+				
+				response.setErrorMsg(" no work order xri supplied ");
+				response.setResponse("no work order xri supplied");
+				response.setResult(false);
+				
+				return response;
+			}
+			
+			SegmentUtil segmentUtil = new SegmentUtil(providerName, segmentName);
+			
+			com.spacio.crm.extension1.jmi1.Segment extensionSegment = segmentUtil.getExtensionSegment(pm);
+			
+			ActivityTracker tracker = null;
+			
+			try
+			{
+				tracker = (ActivityTracker) pm.getObjectById(new Path(workOrderXri));
+			}
+			catch(Exception e)
+			{
+				logger.severe(" --- no work order found with the given id --- ");
+				
+				response.setErrorMsg(" no work order found with the given id ");
+				response.setResponse("no work order found with the given id");
+				response.setResult(false);
+				
+				return response;
+			}
+			
+			String reportingContactXri = tracker.getMainActivity().getReportingContact().getIdentity();
+			
+			String reportingCompanyXri = tracker.getMainActivity().getReportingAccount().getIdentity();
+			
+			String assignedToXri = tracker.getMainActivity().getAssignedTo().getIdentity();
+			
+			for(String workOrderTask : workOrderTasks)
+			{
+				com.spacio.crm.extension1.jmi1.CreateTicketParams in = Structures.create(
+						com.spacio.crm.extension1.jmi1.CreateTicketParams.class,
+                        Datatypes.member(com.spacio.crm.extension1.jmi1.CreateTicketParams.Member.activityCreatorXri, tracker.getDefaultCreator().getIdentity()),                                     
+                        Datatypes.member(com.spacio.crm.extension1.jmi1.CreateTicketParams.Member.name, workOrderTask),
+                        Datatypes.member(com.spacio.crm.extension1.jmi1.CreateTicketParams.Member.reportingAccountXri, reportingCompanyXri),
+                        Datatypes.member(com.spacio.crm.extension1.jmi1.CreateTicketParams.Member.reportingContactXri, reportingContactXri),
+                        Datatypes.member(com.spacio.crm.extension1.jmi1.CreateTicketParams.Member.assignedToXri, assignedToXri),
+                        Datatypes.member(com.spacio.crm.extension1.jmi1.CreateTicketParams.Member.operatorPriority, tracker.getMainActivity().getPriority()),
+                        Datatypes.member(com.spacio.crm.extension1.jmi1.CreateTicketParams.Member.problemDescription, tracker.getMainActivity().getDescription()),
+                        Datatypes.member(com.spacio.crm.extension1.jmi1.CreateTicketParams.Member.channel, null),   
+                        Datatypes.member(com.spacio.crm.extension1.jmi1.CreateTicketParams.Member.category, tracker.getIdentity()),                                             
+                        Datatypes.member(com.spacio.crm.extension1.jmi1.CreateTicketParams.Member.dueBy, tracker.getMainActivity().getDueBy()),
+                        Datatypes.member(com.spacio.crm.extension1.jmi1.CreateTicketParams.Member.scheduledStart, tracker.getMainActivity().getScheduledStart()),
+                        Datatypes.member(com.spacio.crm.extension1.jmi1.CreateTicketParams.Member.scheduledEnd, tracker.getMainActivity().getScheduledEnd()),
+                        Datatypes.member(com.spacio.crm.extension1.jmi1.CreateTicketParams.Member.operatorId, userId)
+		        		
+						);
+				
+				pm.currentTransaction().begin();
+				
+				com.spacio.crm.extension1.jmi1.CreateTicketResult out = extensionSegment.createTicket(in);
+				
+				pm.currentTransaction().commit();
+				
+				if(!out.isResult())
+				{
+					logger.severe(" --- error: " + out.getErrorMsg());
+					
+					response.setErrorMsg(out.getErrorMsg());
+					response.setResponse(out.getErrorMsg());
+					response.setResult(false);
+					
+					return response;
+				}
+				
+				workOrderTaskXris.add(out.getTicketUri());
+			}
+			
+			
+			response.setResult(true);
+			response.setResponse(workOrderTaskXris);
+			//response.setResponse(out.getTrackerXri());
+			
+			logger.info(" --- work order have been created successfully!!! ---");
+		
+		}
+		catch(Exception e)
+		{
+			logger.severe(" --- error: " + e.getMessage());
+			
+			response.setErrorMsg(e.getMessage());
+			response.setResponse(e.getMessage());
+			response.setResult(false);
+		}
+		finally
+		{
+			if(!pm.isClosed())
+				pm.close();
+		}
+		
+		return response;
+	}
+	
+	@Override
+	public ResponseDTO doWorkOrderTasksFollowUp(FollowUpDTO followUp)
+	{
+		logger.info(" --- about to do follow up --- ");
+		
+		ResponseDTO response = new ResponseDTO();
+		
+		com.spacio.crm.extension1.jmi1.WorkOrderTaskFollowUpResult out = null;
+		
+		try
+		{
+			pm = conMgr.getPersistenceManager(userId);
+			
+			SegmentUtil segmentUtil = new SegmentUtil("CRX", segmentName);
+			
+			com.spacio.crm.extension1.jmi1.Segment extensionSegment = segmentUtil.getExtensionSegment(pm);
+			
+			com.spacio.crm.extension1.jmi1.WorkOrderTaskFollowUpParams in = Structures.create(
+					com.spacio.crm.extension1.jmi1.WorkOrderTaskFollowUpParams.class,
+	        		Datatypes.member(com.spacio.crm.extension1.jmi1.WorkOrderTaskFollowUpParams.Member.activityUri, followUp.getActivityXri()),
+	        		Datatypes.member(com.spacio.crm.extension1.jmi1.WorkOrderTaskFollowUpParams.Member.category, followUp.getCategory()),
+	        		Datatypes.member(com.spacio.crm.extension1.jmi1.WorkOrderTaskFollowUpParams.Member.description, followUp.getDescription()),
+	        		Datatypes.member(com.spacio.crm.extension1.jmi1.WorkOrderTaskFollowUpParams.Member.followUpContactXri, followUp.getFollowUpContactXri()),
+	        		Datatypes.member(com.spacio.crm.extension1.jmi1.WorkOrderTaskFollowUpParams.Member.name, followUp.getName()),
+//	        		Datatypes.member(com.spacio.crm.extension1.jmi1.CreateEstateActivityParams.Member.scheduledEnd, new Date()),
+	        		Datatypes.member(com.spacio.crm.extension1.jmi1.WorkOrderTaskFollowUpParams.Member.transitionName, followUp.getTransitionName())
+					);
+			
+			pm.currentTransaction().begin();
+			
+			out = extensionSegment.workOrderTaskFollowUp(in);
+			
+			pm.currentTransaction().commit();
+		
+            if (out == null)
+                logger.fine(" null response. ");
+              else
+                logger.fine(" response is not null. content: " + out.toString());
+              
+              
+             // logger.fine(" result: " + out.isResult() + " errorcode: " + out.getErrorCode() + " reason: " + out.getErrorMsg());
+            
+             ReturnStatusT outcome = out.getStatus();
+             
+               if (outcome.getReturnCode() == BasicException.Code.NONE) 
+               {
+                  logger.info(" ticket follow up successful ! ");
+                   response.setResult(true);
+                   response.setResponse(out.getFollowUp());
+                              
+                   logger.fine(" commit ! ");
+               }
+               else
+               {                 
+                   logger.severe(" error with ticket follow up. code: " + outcome.getReturnParams());            
+                    
+                    response.setErrors(outcome.getReturnParams());
+                    response.setResult(false);
+                 
+                   logger.fine(" rollback ! ");             
+               }
+		
+		}
+		catch(Exception e)
+		{
+			logger.info(" --- error: " + e.getMessage() + e);
+			
+			e.printStackTrace();
+			
+			response.setErrorMsg(e.getMessage());
+			response.setResponse(e);
+			response.setResult(false);
+		}
+		finally
+		{
+			if(!pm.isClosed())
+				pm.close();
+		}
+		
+		return response;
+	}
+}

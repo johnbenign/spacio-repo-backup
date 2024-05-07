@@ -1,0 +1,30 @@
+package com.spacio.fm.core.activity.dao;
+
+import com.spacio.crx.dao.GenericDAO;
+import com.spacio.crx.dto.ResponseDTO;
+import com.spacio.fm.core.activity.dto.CreateVisitDTO;
+import com.spacio.fm.core.activity.dto.FollowUpDTO;
+import com.spacio.fm.core.activity.dto.VisitDTO;
+
+public interface VisitDAO extends GenericDAO
+{
+	public ResponseDTO scheduleVisit(CreateVisitDTO visit);
+	
+	public ResponseDTO getAllScheduledVisits();
+	
+	public ResponseDTO getAllScheduledVisits(int index, int range);
+	
+	public int getAllScheduledVisitsSize();
+	
+	public ResponseDTO updateVisit(VisitDTO visit);
+	
+	public ResponseDTO getScheduledVisit(String visitId);
+	
+	public ResponseDTO doScheduleVisitFollowUp(FollowUpDTO followUp);
+
+	int getAllScheduledVisitsSizeByResident();
+
+	ResponseDTO getAllScheduledVisitsByResident(int index, int range);
+
+	ResponseDTO getAllScheduledVisitsByResident();
+}

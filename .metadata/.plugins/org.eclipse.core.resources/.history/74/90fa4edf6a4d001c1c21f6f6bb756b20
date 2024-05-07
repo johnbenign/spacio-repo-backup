@@ -1,0 +1,481 @@
+package com.spacio.crx.test;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+import javax.jdo.PersistenceManager;
+import javax.jdo.PersistenceManagerFactory;
+import javax.naming.spi.NamingManager;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.opencrx.kernel.account1.cci2.MemberQuery;
+import org.opencrx.kernel.account1.jmi1.Group;
+import org.opencrx.kernel.account1.jmi1.Member;
+import org.opencrx.kernel.utils.Utils;
+import org.openmdx.base.exception.ServiceException;
+import org.openmdx.base.naming.Path;
+import org.openmdx.kernel.lightweight.naming.NonManagedInitialContextFactoryBuilder;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Scope;
+
+import com.spacio.crm.extension1.common.dto.ResponseDTO;
+import com.spacio.crm.extension1.common.dto.WebUrlDTO;
+import com.spacio.crx.bo.UserHome;
+import com.spacio.crx.dto.CreateActivationLinkDTO;
+import com.spacio.crx.dto.PrimaryKey;
+import com.spacio.crx.dto.UserAuthDTO;
+import com.spacio.fm.account1.backend.dto.ContactDTO;
+import com.spacio.fm.account1.backend.dto.FmCompanyDTO;
+import com.spacio.fm.home1.bo.HomeBO;
+import com.spacio.fm.home1.dao.NotifyFacMgr;
+import com.spacio.fm.home1.service.FMUserService;
+import org.opencrx.kernel.account1.jmi1.Account;
+
+
+
+
+@SpringBootTest
+class OnboardEmailTest {
+
+	
+	private static final Logger logger = Logger.getLogger(OnboardEmailTest.class.getName());
+
+	
+	@Autowired
+	private PersistenceManagerFactory pmf;
+	
+	
+	@Autowired	
+	private UserHome userHome;
+	
+	
+	private NotifyFacMgr onBoardEmailSender;
+	
+	
+	@BeforeEach
+	void setUp() throws Exception
+	{
+		
+		logger.info(" -- setUp -- ");
+		
+		// com.spacio.fm.home1.service.FmUserService.register();
+		
+		onBoardEmailSender = new NotifyFacMgr();
+		onBoardEmailSender.setPmf(pmf);
+	}
+	
+	
+	
+	@TestConfiguration
+    static class PMFConfiguration 
+    {
+ 
+		@Value("${db.url}")
+		private String dbUrl;
+		
+		//private String userId = "admin-Aiicodev";      //
+		
+		
+		@Bean("pmf")
+		@Scope(value = "singleton")
+		public PersistenceManagerFactory producePersistenceManagerFactory()
+		{
+
+			logger.info(" -------- producePersistenceManagerFactory ------- ");
+			
+			initContextFactory(dbUrl);
+
+			PersistenceManagerFactory pmf = initPMF();
+			
+		
+			
+			return pmf;
+		}
+		
+		
+		
+		public PersistenceManagerFactory initPMF()
+		{
+
+			logger.info(" -------- initPMF ------- ");
+
+			PersistenceManagerFactory pmf = null;
+
+			try {
+
+				// initContextFactory(dbUrl);
+
+				pmf = Utils.getPersistenceManagerFactory();
+
+				
+				
+				logger.info(" is pmf null ? ");
+				
+				if (pmf != null)
+				{
+					logger.info(" no it is not null.  ");
+					
+					logger.info(" pmf initialised locally  !");
+				}
+				else
+				{
+					logger.info(" is pmf null oh !!! ");
+				}
+
+			} catch (Exception e) {
+
+				logger.severe(" error: " + e.getMessage());
+
+				logger.log(Level.SEVERE, " error initialising local pmf ! ", e);
+
+				// new ServiceException(e).log();
+			}
+
+			return pmf;
+		}
+
+		
+		
+		 public void initContextFactory(String dbUrl) 
+		 {
+			  
+			  logger.info(" -----  initContextFactory ------ ");
+			  
+			  logger.info(" db url: " + dbUrl);
+			  
+			  try {
+			  
+			  logger.info(" inside initContextFactory() ---");
+			  
+			 
+			  
+			  if (!NamingManager.hasInitialContextFactoryBuilder())
+			  {
+			  
+			  logger.info("---init non managed init context .... ---- ");
+			  
+			  
+			  
+			  
+			  // local
+			  
+			  NonManagedInitialContextFactoryBuilder.install( Collections.singletonMap(
+			  "org.openmdx.comp.env.jdbc_opencrx_CRX", dbUrl ) );
+			  
+			  
+			  logger.info(" context has been initialised !");
+			  
+			  
+				/*
+				 * // remote amzaon NonManagedInitialContextFactoryBuilder.install(
+				 * Collections.singletonMap( "org.openmdx.comp.env.jdbc_opencrx_CRX",
+				 * "jdbc:sqlserver:\\/\\/spaciofm.cvjywuu0shvj.us-west-2.rds.amazonaws.com:1433;databaseName=spacio_fm2;selectMethod=cursor?user=crmuser&password=crmpass433&driver=com.microsoft.sqlserver.jdbc.SQLServerDriver"
+				 * );
+				 */
+			  
+			  } else { logger.info(" context has already been initialised !!! "); }
+			  
+			  } catch (Exception ex) {
+			  
+			  logger.severe(" error message: " + ex.getMessage());
+			  
+			  ex.printStackTrace();
+			  
+			  }
+			  
+			  
+			  }
+		
+    }
+	
+	
+
+	@Test
+	void getWebAppConfig() {
+	
+		//fail("Not yet implemented");
+		
+		//String adminRoot = "admin-Root";
+		
+		//PersistenceManager pm = pmf.getPersistenceManager(adminRoot, null);
+		
+		//onBoardEmailSender.setPm(pm);
+		
+		onBoardEmailSender.setPmf(pmf);  // pm will be fetched and closed in method
+		
+	    WebUrlDTO webUrl = onBoardEmailSender.getWebAppConfig();
+	    
+	    
+	  //  pm.close();
+	  
+	  
+	  assertNotNull(webUrl);
+	  
+	  
+	  logger.info(" web url params. hostname: " + webUrl.getHostName() + " port no: " + webUrl.getPortNo() + " context root: " + webUrl.getContextRoot() + " token url: " + webUrl.getUrlPath());
+	  
+	}
+	
+	
+	
+	@Test
+	void getActivationUrl() {
+	
+		//fail("Not yet implemented");
+		
+		String adminRoot = "admin-Root";
+		
+		/*
+		 * PersistenceManager pm = pmf.getPersistenceManager(adminRoot, null);
+		 * 
+		 * onBoardEmailSender.setPm(pm);
+		 */
+		onBoardEmailSender.setPmf(pmf);
+		
+	    WebUrlDTO webUrl = onBoardEmailSender.getWebAppConfig();   // pm will be fetched and closed in method
+	    
+	    
+	  //  pm.close();
+	  
+	  
+	 // assertNotNull(webUrl);
+	  
+	  
+	  logger.info(" web url params. hostname: " + webUrl.getHostName() + " port no: " + webUrl.getPortNo() + " context root: " + webUrl.getContextRoot() + " token url: " + webUrl.getTokenUrlPath());
+	  
+	  //webUrl.setTokenUrlPath(webUrl.getUrlPath());
+	  
+	  PrimaryKey pkey = new PrimaryKey();
+		
+		String token = pkey.getUuid();
+	  
+	String activationUrl =  onBoardEmailSender.getActivationUrl(adminRoot, token, webUrl);
+	  
+	logger.info(" activation url: " + activationUrl);
+	  
+	
+	  assertNotNull(activationUrl);	  
+	}
+	
+	
+	
+	@Test
+	void sendFMProfileCreationMails()
+	{
+		FmCompanyDTO company = new FmCompanyDTO();
+		company.setCompanyName("INJREAL FM");	
+		company.setCompanyTelephone("08027360308");
+		company.setCompanyEmail("newfm@yahoo.com");
+		company.setOfficeAddress("newfm road, port harcourt, Nigeria");
+		
+		
+		//String userId = "admin-Test25";
+		String userXri = "xri://@openmdx*org.opencrx.kernel.home1/provider/CRX/segment/Test25/userHome/LAUFERL88888";
+		String userPassword = "123";
+		String spacioSegment = "Test25";
+		
+		
+		ContactDTO contact = new ContactDTO();
+		contact.setFirstName("Nyemike");
+		contact.setLastName("Isitua");
+		contact.setTelephone("08027360308");
+		contact.setEmailAddress("autisi@yahoo.com");
+		//contact.setEmailAddress("nyemike83@yahoo.com");
+		
+		PrimaryKey pkey = new PrimaryKey();
+		
+		String token = pkey.getUuid();
+		
+		onBoardEmailSender.setPmf(pmf);   // class will get its pm and close by itself.
+		
+		
+      // String adminRoot = "LAUFERL88888";
+		
+		//PersistenceManager pm = pmf.getPersistenceManager(adminRoot, null);
+		
+		//onBoardEmailSender.setPm(pm);
+		
+		
+	 ResponseDTO response =	onBoardEmailSender.sendFMProfileCreationMails(spacioSegment, company, contact, userXri, userPassword, token);
+		
+	    assertNotNull(response);	  
+	    
+	    
+	    assertTrue(response.getResult(),"fm profile mails sent ");
+	}
+	
+	
+	
+	@Test
+	void generateActivationLink()
+	{
+		
+        String spacioSegment = "Test25";
+		
+		String userXri = "xri://@openmdx*org.opencrx.kernel.home1/provider/CRX/segment/Test25/userHome/LAUFERL88888";
+		
+		//userHome.getUser(userId, segmentName);
+		
+		//UserHome userHome = (UserHome)pm.getObjectById(new Path(userXri)); 
+		
+		
+		FmCompanyDTO company = new FmCompanyDTO();
+		company.setCompanyName("INJREAL FM 2");	
+		company.setCompanyTelephone("08027360308");
+		company.setCompanyEmail("newfm2@yahoo.com");
+		company.setOfficeAddress("newfm2 road, port harcourt, Nigeria");
+		
+		
+		
+		ContactDTO contact = new ContactDTO();
+		contact.setFirstName("Nyemike");
+		contact.setLastName("Isitua");
+		contact.setTelephone("08027360308");
+		contact.setEmailAddress("autisi@yahoo.com");
+		//contact.setEmailAddress("nyemike83@yahoo.com");
+		
+		
+		
+			/*
+			 * UserService userService = UserService.getInstance();
+			 * 
+			 * userService.setPmf(pmf); userService.generateActivationLink(userXri,
+			 * spacioSegment);
+			 */
+			
+			HomeBO homeBO = new HomeBO();
+			
+			homeBO.generateActivationLink(userXri, spacioSegment, company, contact);
+			
+	}
+	
+	
+	@Test
+	void authoriseUser()
+	{
+		
+		logger.info(" -- authorise User -- ");
+		
+		UserAuthDTO userAuthDTO = new UserAuthDTO();
+		
+		 String spacioSegment = "Test25";
+			
+			String userXri = "xri://@openmdx*org.opencrx.kernel.home1/provider/CRX/segment/Test25/userHome/LAUFERL88888";
+			
+			userAuthDTO.setUserId(userXri);
+			userAuthDTO.setSpacioSegment(spacioSegment);
+			userAuthDTO.setToken("L9DOXO6W3SIY40WNBANDMNZHX");
+		
+		com.spacio.crx.dto.ResponseDTO response = userHome.authoriseUser(userAuthDTO);
+		
+		
+		  assertNotNull(response);	 
+		  
+		  
+		  if (!response.getResult())
+		  {
+			  
+			  logger.severe(" errors: " + response.getErrors());
+		  }
+		    
+		    
+		 assertTrue(response.getResult(),"user authorised ! ");
+		
+	}
+	
+	
+	
+	@Test
+	void regenerateActivationLink()
+	{
+		
+		logger.info(" -- reGenerateActivationLink() -- ");
+		
+		//UserAuthDTO userAuthDTO = new UserAuthDTO();
+		
+		 String spacioSegment = "Test25";
+			
+			String userXri = "xri://@openmdx*org.opencrx.kernel.home1/provider/CRX/segment/Test25/userHome/LAUFERL88888";
+			
+		
+		CreateActivationLinkDTO createActivationLink = new CreateActivationLinkDTO();
+	
+		createActivationLink.setUserId(userXri);
+		createActivationLink.setSpacioSegment(spacioSegment);
+		
+		
+		
+		com.spacio.crx.dto.ResponseDTO response = userHome.generateActivationLink(createActivationLink);
+		
+		
+		 assertNotNull(response);	  
+				    
+		 assertTrue(response.getResult(),"user authorised ! ");		
+	}
+	
+	
+	
+	
+	@Test
+	void getFacMgrs()
+	{
+		
+		logger.info(" -- getFacMgrs -- ");
+		
+		String adminUserId = "admin-Test25";
+		
+		String estateXri = "xri://@openmdx*org.opencrx.kernel.account1/provider/CRX/segment/Test25/account/91YBE5WBMDYI3SJEU5S2HF4FI";
+		
+		
+		PersistenceManager pm = pmf.getPersistenceManager(adminUserId, null);
+		
+		
+		Group estate = (Group)pm.getObjectById(new Path(estateXri));		
+		
+		
+		MemberQuery memberQuery = (MemberQuery)pm.newQuery(Member.class);
+		memberQuery.forAllDisabled().equalTo(false);
+		memberQuery.forAllMemberRole().equalTo(FMUserService.FM_MGR_ROLE);
+	//	memberQuery.forAllMemberRole().elementOf(FMUserService.FM_MGR_ROLE);
+		
+		logger.info(" query: " + memberQuery);
+		
+		
+		Collection<Member> members = estate.getMember(memberQuery);
+		
+		 assertNotNull(members);	  
+		
+		logger.info(" --- members size: " + members.size());
+		
+		
+		
+       Iterator<Member> iterator = members.iterator();
+		
+		logger.info(" get the first facility manager ...");
+		Member member = iterator.next();  
+		
+		Account account = member.getAccount();
+		
+		logger.info(" fm mgr name: " + account.getFullName());
+		
+		
+		
+		logger.info(" pm is closed ! ");
+		
+		pm.close();		
+	}
+	
+	
+	
+
+}

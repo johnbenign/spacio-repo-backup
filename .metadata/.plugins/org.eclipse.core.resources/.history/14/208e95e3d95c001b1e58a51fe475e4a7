@@ -1,0 +1,5 @@
+package com.spacio.crx.dao;
+
+public interface XmlUploadRepository {
+
+}

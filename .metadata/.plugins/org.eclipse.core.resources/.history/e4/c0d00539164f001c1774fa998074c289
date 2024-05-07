@@ -1,0 +1,287 @@
+package com.spacio.fm.core.contract;
+
+import java.math.BigDecimal;
+import java.text.DateFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Collections;
+import java.util.Date;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+import javax.jdo.PersistenceManagerFactory;
+import javax.naming.spi.NamingManager;
+
+import org.junit.jupiter.api.Test;
+import org.opencrx.kernel.utils.Utils;
+import org.openmdx.kernel.lightweight.naming.NonManagedInitialContextFactoryBuilder;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Scope;
+import static org.junit.jupiter.api.Assertions.*;
+import com.spacio.fm.core.contract.bo.ServiceContractBO;
+import com.spacio.fm.core.contract.dto.ServiceChargeDTO;
+import com.spacio.fm.core.contract.dto.ServiceContractDTO;
+import com.spacio.fm.core.contract.dto.ServicePaymentDTO;
+import com.spacio.fm.core.dto.ResponseDTO;
+
+@SpringBootTest
+public class TestServiceContract
+{
+	private static final Logger logger = Logger.getLogger(TestServiceContract.class.getName());
+	
+	@Value("${dev.provider}")
+	private String provider;
+	
+	@Autowired
+	private ServiceContractBO contractBO;
+	
+	@TestConfiguration
+    static class PMFConfiguration 
+    {
+ 
+		@Value("${db.url}")
+		private String dbUrl;
+		
+		//private String userId = "admin-Aiicodev";      //
+		
+		
+		@Bean("pmf")
+		@Scope(value = "singleton")
+		public PersistenceManagerFactory producePersistenceManagerFactory()
+		{
+
+			logger.info(" -------- producePersistenceManagerFactory ------- ");
+			
+			initContextFactory(dbUrl);
+
+			PersistenceManagerFactory pmf = initPMF();
+			
+			return pmf;
+		}
+		
+		
+		
+		public PersistenceManagerFactory initPMF()
+		{
+
+			logger.info(" -------- initPMF ------- ");
+
+			PersistenceManagerFactory pmf = null;
+
+			try {
+
+				// initContextFactory(dbUrl);
+
+				pmf = Utils.getPersistenceManagerFactory();
+
+				
+				
+				logger.info(" is pmf null ? ");
+				
+				if (pmf != null)
+				{
+					logger.info(" no it is not null.  ");
+					
+					logger.info(" pmf initialised locally  !");
+				}
+				else
+				{
+					logger.info(" is pmf null oh !!! ");
+				}
+
+			} catch (Exception e) {
+
+				logger.severe(" error: " + e.getMessage());
+
+				logger.log(Level.SEVERE, " error initialising local pmf ! ", e);
+
+				// new ServiceException(e).log();
+			}
+
+			return pmf;
+		}
+
+		
+		
+		 public void initContextFactory(String dbUrl) 
+		 {
+			  
+			  logger.info(" -----  initContextFactory ------ ");
+			  
+			  logger.info(" db url: " + dbUrl);
+			  
+			  try {
+			  
+			  logger.info(" inside initContextFactory() ---");
+			  
+			  
+			  if (!NamingManager.hasInitialContextFactoryBuilder())
+			  {
+			  
+			  logger.info("---init non managed init context .... ---- ");
+			  
+			  
+			  
+			  
+			  // local
+			  
+			  NonManagedInitialContextFactoryBuilder.install( Collections.singletonMap(
+			  "org.openmdx.comp.env.jdbc_opencrx_CRX", dbUrl ) );
+			  
+			  
+			  logger.info(" context has been initialised !");
+			  
+			  
+				/*
+				 * // remote amzaon NonManagedInitialContextFactoryBuilder.install(
+				 * Collections.singletonMap( "org.openmdx.comp.env.jdbc_opencrx_CRX",
+				 * "jdbc:sqlserver:\\/\\/spaciofm.cvjywuu0shvj.us-west-2.rds.amazonaws.com:1433;databaseName=spacio_fm2;selectMethod=cursor?user=crmuser&password=crmpass433&driver=com.microsoft.sqlserver.jdbc.SQLServerDriver"
+				 * );
+				 */
+			  
+			  } else { logger.info(" context has already been initialised !!! "); }
+			  
+			  } catch (Exception ex) {
+			  
+			  logger.severe(" error message: " + ex.getMessage());
+			  
+			  ex.printStackTrace();
+			  
+			  }
+			  
+			  
+			  }
+		
+		
+		
+    }
+	
+	//@Test
+	public void testCreateServiceContract()
+	{
+		logger.info(" ------ testCreateServiceContract ------- ");
+		
+        SimpleDateFormat format = new SimpleDateFormat("dd MM yyyy");
+
+        String expiryDateText = "25 12 2021";
+
+        try
+        {
+            Date activeDate = format.parse(format.format(new Date()));
+
+            Date expiryDate = format.parse(expiryDateText);
+
+            ServiceContractDTO contractDTO = new ServiceContractDTO();
+
+            //account/CRX/INJREAL2/9F1OWNTT35OFGCS63IX6KJD2D
+            contractDTO.setAccountXri("xri://@openmdx*org.opencrx.kernel.account1/provider/CRX/segment/INJREAL2/account/9F1OWNTT35OFGCS63IX6KJD2D");
+            contractDTO.setActiveDate(activeDate);
+            contractDTO.setDescription("For Painting");
+            contractDTO.setDurationUnit((short) 1);
+            contractDTO.setExpiryDate(expiryDate);
+            contractDTO.setName("Painting Fee");
+            contractDTO.setPriority((short) 0); //account/CRX/Aiicodev/30SYQJC8LLEJS4WW6BS6QOPZ7  account/CRX/Aiicodev/3NDSKGO4CLPT57D5T9SCOV1RA
+            
+            //account/CRX/INJREAL2/93PFZ7ZAU6TPOXW7OYUM9K4QK
+            contractDTO.setGroupXri("xri://@openmdx*org.opencrx.kernel.account1/provider/CRX/segment/INJREAL2/account/93PFZ7ZAU6TPOXW7OYUM9K4QK");
+            
+            //serviceContractCreator/CRX/INJREAL2/LWB1MR1IW6GO91DPIAI38ZZOL
+            contractDTO.setContractCreatorXri("xri://@openmdx*com.spacio.crm.contract1/provider/CRX/segment/INJREAL2/serviceContractCreator/LWB1MR1IW6GO91DPIAI38ZZOL");
+            //            createServiceContractDTO.setContractTypeXri("xri://@openmdx*org.opencrx.kernel.contract1/provider/CRX/segment/Aiicodev/contractType/3B5PYMT775FQH3Z26NOAXUT97");
+
+            contractDTO.setSegmentName("INJREAL2");
+            //ContractService.register();
+
+            ResponseDTO response = contractBO.createFMContract(contractDTO);
+            
+            assertNotNull(response, "respone not null");
+            
+            assertTrue(response.getResult(), "the result should be true");
+
+            if (response.getResult())
+            {
+                logger.info("service contract created successfully");
+            }
+            else
+            {
+                logger.info("failed to create service contract");
+            }
+        }
+        catch (ParseException e)
+        {
+            logger.severe("error : " + e.getMessage());
+        }
+	}
+	
+	//@Test
+	public void testCreateServiceCharge()
+	{
+		DateFormat format = new SimpleDateFormat("dd MM yyyy");
+		
+		Date endDate = null;
+		
+		try {
+			endDate = format.parse("25 12 2021");
+		} catch (ParseException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		ServiceChargeDTO serviceChargeDTO = new ServiceChargeDTO();
+		
+		serviceChargeDTO.setAmount(new BigDecimal(300000));
+		serviceChargeDTO.setDurationFrequency((short)0);
+		serviceChargeDTO.setDurationUnit(1);
+		serviceChargeDTO.setEndDate(endDate);
+		serviceChargeDTO.setPaymentStatus((short)0);
+		serviceChargeDTO.setSegmentName("INJREAL2");
+		try {
+			serviceChargeDTO.setStartDate(format.parse(format.format(new Date())));
+		} catch (ParseException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		//serviceContract/CRX/INJREAL2/LBQX0F6WRPXPO5W01SFO5C6MK
+		String contractXri = "xri://@openmdx*com.spacio.crm.contract1/provider/CRX/segment/INJREAL2/serviceContract/LBQX0F6WRPXPO5W01SFO5C6MK";
+		
+		ResponseDTO response = contractBO.createServiceCharge(contractXri, serviceChargeDTO);
+		
+		assertNotNull(response, "response should not be null");
+		
+		assertTrue(response.getResult(), "result should be true");
+	}
+	
+	//@Test
+	public void testRegisterPayment()
+	{
+		DateFormat format = new SimpleDateFormat("dd MM yyyy");
+		
+		ServicePaymentDTO servicePaymentDTO = new ServicePaymentDTO();
+		
+		servicePaymentDTO.setAmount(new BigDecimal(20));
+		servicePaymentDTO.setPaymentMethod((short)0);
+		servicePaymentDTO.setReference("Benign");
+		servicePaymentDTO.setRemarks("Full Payment");
+		servicePaymentDTO.setSegmentName("INJREAL2");
+		try {
+			servicePaymentDTO.setPaymentDate(format.parse(format.format(new Date())));
+		} catch (ParseException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		//serviceCharge/CRX/INJREAL2/LBQX0F6WRPXPO5W01SFO5C6MK/L1THL45T63DNW64MSFT2BIJB3
+		String serviceChargeXri = "xri://@openmdx*com.spacio.crm.contract1/provider/CRX/segment/INJREAL2/serviceContract/LBQX0F6WRPXPO5W01SFO5C6MK/serviceCharge/L1THL45T63DNW64MSFT2BIJB3";
+		
+		ResponseDTO response = contractBO.registerPayment(serviceChargeXri, servicePaymentDTO);
+		
+		assertNotNull(response, "response should not be null");
+		
+		assertTrue(response.getResult(), "result should be true");
+	}
+}

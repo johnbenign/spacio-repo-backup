@@ -1,0 +1,34 @@
+package com.spacio.fm.core.activity.bo;
+
+import java.util.List;
+
+import com.spacio.crx.bo.GenericBO;
+import com.spacio.crx.dto.ResponseDTO;
+import com.spacio.fm.core.activity.dto.CreateWorkOrderDTO;
+import com.spacio.fm.core.activity.dto.FollowUpDTO;
+import com.spacio.fm.core.activity.dto.WorkOrderDTO;
+import com.spacio.fm.core.activity.dto.WorkOrderFollowUpDTO;
+import com.spacio.fm.core.activity.enums.WorkOrderConstant;
+
+public interface WorkOrderBO extends GenericBO
+{
+	public ResponseDTO createWorkOrder(CreateWorkOrderDTO workOrder);
+	
+	public ResponseDTO updateWorkOrder(WorkOrderDTO workOrder);
+	
+	public ResponseDTO getWorkOrder(String workOrderId);
+	
+	public ResponseDTO doWorkOrderFollowUp(WorkOrderFollowUpDTO followUp);
+	
+	public ResponseDTO createWorkOrderTasks(List<String> workOrderTasks, String workOrderXri);
+	
+	public ResponseDTO doWorkOrderTasksFollowUp(FollowUpDTO followUp);
+
+	ResponseDTO getAllActiveWorkOrders();
+
+	ResponseDTO getAllCompletedWorkOrders();
+
+	ResponseDTO getAllSuspendedWorkOrders();
+
+	ResponseDTO getAllWorkOrders(WorkOrderConstant status);
+}

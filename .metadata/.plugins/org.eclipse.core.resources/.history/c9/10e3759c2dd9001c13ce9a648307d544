@@ -1,0 +1,124 @@
+package com.spacio.fm.core.contract.dto;
+
+
+import java.math.BigDecimal;
+
+import java.util.Date;
+import java.util.List;
+
+import com.spacio.crx.dto.PrimaryKey;
+
+public class ServiceChargeDTO
+{
+    private Date startDate;
+    private Date endDate;
+    private Short paymentStatus;
+    private Integer durationUnit;
+    private Short durationFrequency;
+    private BigDecimal amount;
+    private BigDecimal amountOutstanding;
+    private List<ServicePaymentDTO> servicePayments;
+    private PrimaryKey key;
+    private String xri;
+    private String segmentName;
+    private String userId;
+
+
+    public void setStartDate(Date startDate) {
+        this.startDate = startDate;
+    }
+
+    public Date getStartDate() {
+        return startDate;
+    }
+
+    public void setEndDate(Date endDate) {
+        this.endDate = endDate;
+    }
+
+    public Date getEndDate() {
+        return endDate;
+    }
+
+    public void setPaymentStatus(Short paymentStatus) {
+        this.paymentStatus = paymentStatus;
+    }
+
+    public Short getPaymentStatus() {
+        return paymentStatus;
+    }
+
+    public void setDurationUnit(Integer durationUnit) {
+        this.durationUnit = durationUnit;
+    }
+
+    public Integer getDurationUnit() {
+        return durationUnit;
+    }
+
+    public void setDurationFrequency(Short durationFrequency) {
+        this.durationFrequency = durationFrequency;
+    }
+
+    public Short getDurationFrequency() {
+        return durationFrequency;
+    }
+
+    public void setAmount(BigDecimal amount) {
+        this.amount = amount;
+    }
+
+    public BigDecimal getAmount() {
+        return amount;
+    }
+
+    public void setAmountOutstanding(BigDecimal amountOutstanding) {
+        this.amountOutstanding = amountOutstanding;
+    }
+
+    public BigDecimal getAmountOutstanding() {
+        return amountOutstanding;
+    }
+
+    public void setServicePayments(List<ServicePaymentDTO> servicePayments) {
+        this.servicePayments = servicePayments;
+    }
+
+    public List<ServicePaymentDTO> getServicePayments() {
+        return servicePayments;
+    }
+
+	public PrimaryKey getKey() {
+		return key;
+	}
+
+	public void setKey(PrimaryKey key) {
+		this.key = key;
+	}
+
+	public String getXri() {
+		return xri;
+	}
+
+	public void setXri(String xri) {
+		this.xri = xri;
+	}
+
+	public String getSegmentName() {
+		return segmentName;
+	}
+
+	public void setSegmentName(String segmentName) {
+		this.segmentName = segmentName;
+	}
+
+	public String getUserId() {
+		return userId;
+	}
+
+	public void setUserId(String userId) {
+		this.userId = userId;
+	}
+    
+    
+}

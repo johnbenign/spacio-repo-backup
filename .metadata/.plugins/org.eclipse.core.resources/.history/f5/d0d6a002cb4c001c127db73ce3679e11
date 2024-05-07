@@ -1,0 +1,376 @@
+package com.spacio.crx.test;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+import java.util.Collections;
+import java.util.Date;
+import java.util.List;
+import java.util.Properties;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+import javax.jdo.JDOHelper;
+import javax.jdo.PersistenceManagerFactory;
+import javax.naming.spi.NamingManager;
+
+import org.junit.jupiter.api.Test;
+import org.opencrx.kernel.utils.Utils;
+import org.openmdx.kernel.lightweight.naming.NonManagedInitialContextFactoryBuilder;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Scope;
+
+import com.spacio.crx.bo.UserHome;
+import com.spacio.crx.dto.LogInResultDTO;
+import com.spacio.crx.dto.PrimaryKey;
+import com.spacio.crx.dto.RoleDTO;
+import com.spacio.crx.dto.UserDTO;
+
+@SpringBootTest
+class TestUserHome2 {
+
+	private static final Logger logger = Logger.getLogger(TestUserHome2.class.getName());
+
+	@Autowired	
+	UserHome userHome;
+	
+	
+	@TestConfiguration
+    static class PMFConfiguration 
+    {
+ 
+//		@Value("${db.url}")
+//		private String dbUrl;
+//		
+//		
+//		@Bean("crxCustomPMF")
+//		@Scope(value = "singleton")
+//		public PersistenceManagerFactory producePersistenceManagerFactory()
+//		{
+//
+//			logger.info(" -------- producePersistenceManagerFactory ------- ");
+//
+//			initContextFactory(dbUrl);
+//			
+//			PersistenceManagerFactory pmf = initConProperties();
+//
+//			return pmf;
+//		}
+//		
+//		
+//		
+//		public PersistenceManagerFactory initConProperties() 
+//		 {
+//		        
+//		    	logger.info(" --------  initConProperties()  ------- ");
+//		    	
+//		        Properties properties = new Properties();
+//		       
+//		       properties.setProperty("javax.jdo.PersistenceManagerFactoryClass", "org.openmdx.base.accessor.jmi.spi.EntityManagerFactory_1");
+//		             
+//		            
+//		        properties.setProperty("javax.jdo.option.Name", "EntityManagerFactory");
+//		        
+//		        properties.setProperty("javax.jdo.option.ConnectionFactoryName", "jdo:DataManagerFactory");
+//		        
+//		        logger.info(" apply entity manager properties ... ");
+//		        
+//		        properties.setProperty("org.openmdx.jdo.EntityManager.plugIn[0]","org.opencrx.kernel.aop2.PlugIn.Standard");            
+//		        properties.setProperty("org.opencrx.kernel.aop2.PlugIn.Standard.userObject[0]","org.opencrx.kernel.aop2.PlugIn.Standard.Configuration");             
+//		        properties.setProperty("org.opencrx.kernel.aop2.PlugIn.Standard.Configuration.class","org.opencrx.kernel.aop2.Configuration");           
+//		        properties.setProperty("org.opencrx.kernel.aop2.PlugIn.Standard.Configuration.class","org.opencrx.sample.backend.Configuration");
+//		            
+//		      
+//		                                                                                                               
+//		        properties.setProperty("org.opencrx.kernel.aop2.PlugIn.Standard.Configuration.passwordEncodingAlgorithm","MD5");                                                                                                                              
+//		        properties.setProperty("org.opencrx.kernel.aop2.PlugIn.Standard.Configuration.EMailAddressLookupCaseInsensitive","(java.lang.Boolean)true");                                                                                                                             
+//		        properties.setProperty("org.opencrx.kernel.aop2.PlugIn.Standard.Configuration.EMailAddressLookupIgnoreDisabled","(java.lang.Boolean)false");
+//		                                                                                               
+//		        properties.setProperty("org.opencrx.kernel.aop2.PlugIn.Standard.modelPackage[0]","org:openmdx:base");                                                                                             
+//		        properties.setProperty("org.opencrx.kernel.aop2.PlugIn.Standard.packageImpl[0]","org.opencrx.generic.aop2");                 
+//		                                                                                             
+//		        properties.setProperty("org.opencrx.kernel.aop2.PlugIn.Standard.modelPackage[1]","org:opencrx:kernel:home1");                                                                                             
+//		        properties.setProperty("org.opencrx.kernel.aop2.PlugIn.Standard.packageImpl[1]","org.opencrx.kernel.home1.aop2");                                                                                              
+//		              
+//		        properties.setProperty("org.opencrx.kernel.aop2.PlugIn.Standard.modelPackage[2]","org:opencrx:kernel:depot1");                                                                                             
+//		        properties.setProperty("org.opencrx.kernel.aop2.PlugIn.Standard.packageImpl[2]","org.opencrx.kernel.depot1.aop2");                                                                                              
+//		                                                                                               
+//		        properties.setProperty("org.opencrx.kernel.aop2.PlugIn.Standard.modelPackage[3]","org:opencrx:kernel:activity1");
+//		        properties.setProperty("org.opencrx.kernel.aop2.PlugIn.Standard.packageImpl[3]","org.opencrx.kernel.activity1.aop2");
+//		        
+//		        properties.setProperty("org.opencrx.kernel.aop2.PlugIn.Standard.modelPackage[4]","org:opencrx:kernel:base");                                            
+//		        properties.setProperty("org.opencrx.kernel.aop2.PlugIn.Standard.packageImpl[4]","org.opencrx.kernel.base.aop2");
+//		                                                                                                       
+//		        properties.setProperty("org.opencrx.kernel.aop2.PlugIn.Standard.modelPackage[5]","org:opencrx:kernel:admin1");
+//		        properties.setProperty("org.opencrx.kernel.aop2.PlugIn.Standard.packageImpl[5]","org.opencrx.kernel.admin1.aop2");
+//		                                                                                                               
+//		        properties.setProperty("org.opencrx.kernel.aop2.PlugIn.Standard.modelPackage[6]","org:opencrx:kernel:address1"); 
+//		        properties.setProperty("org.opencrx.kernel.aop2.PlugIn.Standard.packageImpl[6]","org.opencrx.kernel.address1.aop2");
+//		                                                                                               
+//		        properties.setProperty("org.opencrx.kernel.aop2.PlugIn.Standard.modelPackage[7]","org:opencrx:kernel:account1");
+//		        properties.setProperty("org.opencrx.kernel.aop2.PlugIn.Standard.packageImpl[7]","org.opencrx.kernel.account1.aop2");
+//		                                                                                              
+//		        properties.setProperty("org.opencrx.kernel.aop2.PlugIn.Standard.modelPackage[8]","org:opencrx:kernel:contract1");
+//		        properties.setProperty("org.opencrx.kernel.aop2.PlugIn.Standard.packageImpl[8]","org.opencrx.kernel.contract1.aop2");
+//		                                                                                               
+//		        properties.setProperty("org.opencrx.kernel.aop2.PlugIn.Standard.modelPackage[9]","org:opencrx:kernel:product1");
+//		        properties.setProperty("org.opencrx.kernel.aop2.PlugIn.Standard.packageImpl[9]","org.opencrx.kernel.product1.aop2");
+//		                                                                                                
+//		        properties.setProperty("org.opencrx.kernel.aop2.PlugIn.Standard.modelPackage[10]","org:opencrx:kernel:model1");
+//		        properties.setProperty("org.opencrx.kernel.aop2.PlugIn.Standard.packageImpl[10]","org.opencrx.kernel.model1.aop2");
+//		                                                                                                
+//		        properties.setProperty("org.opencrx.kernel.aop2.PlugIn.Standard.modelPackage[11]","org:opencrx:kernel:generic");
+//		        properties.setProperty("org.opencrx.kernel.aop2.PlugIn.Standard.packageImpl[11]","org.opencrx.kernel.generic.aop2");
+//		                                                                                                
+//		        properties.setProperty("org.opencrx.kernel.aop2.PlugIn.Standard.modelPackage[12]","org:opencrx:kernel:forecast1");
+//		        properties.setProperty("org.opencrx.kernel.aop2.PlugIn.Standard.packageImpl[12]","org.opencrx.kernel.forecast1.aop2");
+//		                
+//		        properties.setProperty("org.opencrx.kernel.aop2.PlugIn.Standard.modelPackage[13]","org:opencrx:kernel:building1");
+//		        properties.setProperty("org.opencrx.kernel.aop2.PlugIn.Standard.packageImpl[13]","org.opencrx.kernel.building1.aop2");
+//		                                                                                        
+//		        properties.setProperty("org.opencrx.kernel.aop2.PlugIn.Standard.modelPackage[14]","org:opencrx:kernel:document1");
+//		        properties.setProperty("org.opencrx.kernel.aop2.PlugIn.Standard.packageImpl[14]","org.opencrx.kernel.document1.aop2");                                                                                       
+//		                                                                                               
+//		        properties.setProperty("org.opencrx.kernel.aop2.PlugIn.Standard.modelPackage[15]","org:opencrx:kernel:workflow1");  
+//		        properties.setProperty("org.opencrx.kernel.aop2.PlugIn.Standard.packageImpl[15]","org.opencrx.kernel.workflow1.aop2");
+//		        
+//		        
+//		        
+//		        
+//		        logger.info(" apply data manager properties ... ");
+//		                                             
+//		        properties.setProperty("javax.jdo.option.IsolateThreads","true");
+//		        properties.setProperty("org.openmdx.jdo.DataManager.optimalFetchSize","(java.lang.Integer)64");
+//		        properties.setProperty("org.openmdx.jdo.DataManager.cacheThreshold","(java.lang.Integer)256");
+//		        properties.setProperty("org.openmdx.jdo.DataManager.xriPattern[0]","xri://@openmdx*org.opencrx.kernel.account1/($...)");
+//		        properties.setProperty("org.openmdx.jdo.DataManager.restPlugIn[0]","org.opencrx.kernel.rest.PlugIn.Kernel");
+//		       
+//		        properties.setProperty("org.openmdx.jdo.DataManager.xriPattern[1]","xri://@openmdx*org.opencrx.kernel.activity1/($...)");       
+//		        properties.setProperty("org.openmdx.jdo.DataManager.restPlugIn[1]","org.opencrx.kernel.rest.PlugIn.Kernel");
+//		                       
+//		        properties.setProperty("org.openmdx.jdo.DataManager.xriPattern[2]","xri://@openmdx*org.opencrx.kernel.building1/($...)");     
+//		        properties.setProperty("org.openmdx.jdo.DataManager.restPlugIn[2]","org.opencrx.kernel.rest.PlugIn.Kernel");
+//		                       
+//		        properties.setProperty("org.openmdx.jdo.DataManager.xriPattern[3]","xri://@openmdx*org.opencrx.kernel.code1/($...)");           
+//		        properties.setProperty("org.openmdx.jdo.DataManager.restPlugIn[3]","org.opencrx.kernel.rest.PlugIn.Kernel");            
+//		               
+//		        properties.setProperty("org.openmdx.jdo.DataManager.xriPattern[4]","xri://@openmdx*org.opencrx.kernel.contract1/($...)");      
+//		        properties.setProperty("org.openmdx.jdo.DataManager.restPlugIn[4]","org.opencrx.kernel.rest.PlugIn.Kernel");            
+//		              
+//		        properties.setProperty("org.openmdx.jdo.DataManager.xriPattern[5]","xri://@openmdx*org.opencrx.kernel.document1/($...)");       
+//		        properties.setProperty("org.openmdx.jdo.DataManager.restPlugIn[5]","org.opencrx.kernel.rest.PlugIn.Kernel");
+//		                              
+//		        properties.setProperty("org.openmdx.jdo.DataManager.xriPattern[6]","xri://@openmdx*org.opencrx.kernel.forecast1/($...)");      
+//		        properties.setProperty("org.openmdx.jdo.DataManager.restPlugIn[6]","org.opencrx.kernel.rest.PlugIn.Kernel");
+//		                             
+//		        properties.setProperty("org.openmdx.jdo.DataManager.xriPattern[7]","xri://@openmdx*org.opencrx.kernel.home1/($...)");      
+//		        properties.setProperty("org.openmdx.jdo.DataManager.restPlugIn[7]","org.opencrx.kernel.rest.PlugIn.Kernel");
+//		                              
+//		        properties.setProperty("org.openmdx.jdo.DataManager.xriPattern[8]","xri://@openmdx*org.opencrx.kernel.product1/($...)");      
+//		        properties.setProperty("org.openmdx.jdo.DataManager.restPlugIn[8]","org.opencrx.kernel.rest.PlugIn.Kernel");
+//		                             
+//		        properties.setProperty("org.openmdx.jdo.DataManager.xriPattern[9]","xri://@openmdx*org.opencrx.kernel.uom1/($...)");                  
+//		        properties.setProperty("org.openmdx.jdo.DataManager.restPlugIn[9]","org.opencrx.kernel.rest.PlugIn.Kernel");
+//		                              
+//		        properties.setProperty("org.openmdx.jdo.DataManager.xriPattern[10]","xri://@openmdx*org.opencrx.kernel.workflow1/($...)");                     
+//		        properties.setProperty("org.openmdx.jdo.DataManager.restPlugIn[10]","org.opencrx.kernel.rest.PlugIn.Kernel");
+//		                               
+//		        properties.setProperty("org.openmdx.jdo.DataManager.xriPattern[11]","xri://@openmdx*org.opencrx.kernel.reservation1/($...)");                 
+//		        properties.setProperty("org.openmdx.jdo.DataManager.restPlugIn[11]","org.opencrx.kernel.rest.PlugIn.Kernel");
+//		                               
+//		        properties.setProperty("org.openmdx.jdo.DataManager.xriPattern[12]","xri://@openmdx*org.opencrx.kernel.admin1/($...)");       
+//		        properties.setProperty("org.openmdx.jdo.DataManager.restPlugIn[12]","org.opencrx.kernel.rest.PlugIn.Kernel");
+//		                       
+//		        properties.setProperty("org.openmdx.jdo.DataManager.xriPattern[13]", "xri://@openmdx*org.opencrx.kernel.model1/($...)");      
+//		        properties.setProperty("org.openmdx.jdo.DataManager.restPlugIn[13]","org.opencrx.kernel.rest.PlugIn.Kernel");
+//		                                              
+//		        properties.setProperty("org.openmdx.jdo.DataManager.xriPattern[14]","xri://@openmdx*org.opencrx.kernel.depot1/($...)");         
+//		        properties.setProperty("org.openmdx.jdo.DataManager.restPlugIn[14]","org.opencrx.kernel.rest.PlugIn.Kernel");
+//		                               
+//		        properties.setProperty("org.openmdx.jdo.DataManager.xriPattern[15]","xri://@openmdx*org.openmdx.security.realm1/($...)");       
+//		        properties.setProperty("org.openmdx.jdo.DataManager.restPlugIn[15]","org.opencrx.kernel.rest.PlugIn.Security");
+//		                                             
+//		        properties.setProperty("org.openmdx.jdo.DataManager.xriPattern[16]","xri://@openmdx*org.opencrx.security.identity1/($...)");            
+//		        properties.setProperty("org.openmdx.jdo.DataManager.restPlugIn[16]","org.opencrx.kernel.rest.PlugIn.Security");
+//		                                             
+//		        properties.setProperty("org.openmdx.jdo.DataManager.xriPattern[17]","xri://@openmdx*org.openmdx.security.authorization1/($...)");     
+//		        properties.setProperty("org.openmdx.jdo.DataManager.restPlugIn[17]","org.opencrx.kernel.rest.PlugIn.Security");
+//		                              
+//		        properties.setProperty("org.openmdx.jdo.DataManager.xriPattern[18]","xri://@openmdx*org.openmdx.security.authentication1/($...)");      
+//		        properties.setProperty("org.openmdx.jdo.DataManager.restPlugIn[18]","org.opencrx.kernel.rest.PlugIn.Security");
+//
+//		       
+//		        properties.setProperty("org.opencrx.kernel.rest.PlugIn.Kernel.class","org.openmdx.base.dataprovider.kernel.Dataprovider_2");
+//		        properties.setProperty("org.opencrx.kernel.rest.PlugIn.Kernel.configuration","xri://+resource/META-INF/Kernel.properties");
+//
+//		        properties.setProperty("org.opencrx.kernel.rest.PlugIn.Security.class","org.openmdx.base.dataprovider.kernel.Dataprovider_2");
+//		        properties.setProperty("org.opencrx.kernel.rest.PlugIn.Security.configuration","xri://+resource/META-INF/Security.properties");
+//		     
+//		       /*   */
+//		        
+//		        
+//		        PersistenceManagerFactory  pmf = JDOHelper.getPersistenceManagerFactory(properties);
+//		        
+//		      ///  ConnectionManager.pmf = pmf;
+//		        
+//		        if (pmf != null)
+//		        {
+//		          logger.info(" pmf is not null oh !!!!!!!!!!!!!! "); 
+//		        }
+//		        else
+//		          logger.severe(" pmf is null ! haba why ????? ");
+//		        
+//		        
+//		        return pmf;
+//		    }
+//
+//		
+//		
+//		 public void initContextFactory(String dbUrl) 
+//		 {
+//			  
+//			  logger.info(" -----  initContextFactory ------ ");
+//			  
+//			  logger.info(" db url: " + dbUrl);
+//			  
+//			  try {
+//			  
+//			  logger.info(" inside initContextFactory() ---");
+//			  
+//			  
+//			  if (!NamingManager.hasInitialContextFactoryBuilder())
+//			  {
+//			  
+//			  logger.info("---init non managed init context .... ---- ");
+//			  
+//			  
+//			  
+//			  
+//			  // local
+//			  
+//			  NonManagedInitialContextFactoryBuilder.install( Collections.singletonMap(
+//			  "org.openmdx.comp.env.jdbc_opencrx_CRX", dbUrl ) );
+//			  
+//			  
+//			  logger.info(" context has been initialised !");
+//			  
+//			  
+//				/*
+//				 * // remote amzaon NonManagedInitialContextFactoryBuilder.install(
+//				 * Collections.singletonMap( "org.openmdx.comp.env.jdbc_opencrx_CRX",
+//				 * "jdbc:sqlserver:\\/\\/spaciofm.cvjywuu0shvj.us-west-2.rds.amazonaws.com:1433;databaseName=spacio_fm2;selectMethod=cursor?user=crmuser&password=crmpass433&driver=com.microsoft.sqlserver.jdbc.SQLServerDriver"
+//				 * );
+//				 */
+//			  
+//			  } else { logger.info(" context has already been initialised !!! "); }
+//			  
+//			  } catch (Exception ex) {
+//			  
+//			  logger.severe(" error message: " + ex.getMessage());
+//			  
+//			  ex.printStackTrace();
+//			  
+//			  }
+//			  
+//			  
+//			  }
+//		
+		
+		
+    }
+	
+	
+	@Test
+	public void logIn()
+	{
+		//fail("Not yet implemented");
+		
+	//	userHome.logIn("admin-Aiicodev", "admin-Aiicodev");
+		
+		//userHome.logIn("admin-Test25", "123");
+		userHome.logIn("kolaid2", "123");
+		
+	}
+	
+	
+	@Test
+	public void logIn2()
+	{
+		   
+		
+		 LogInResultDTO result = userHome.logIn("kolaid2", "123");
+		
+		// LogInResultDTO result = userHome.logIn("admin-Test25", "123");
+	        
+	        
+	        if (result == null)
+	        {
+	        	
+	        	logger.severe(" log in returned null !");
+	        	
+	        	return;
+	        }
+	        
+	        
+	       if (!result.getResult())
+	       {               
+	          
+	    	   logger.severe(" log in attempt failed ! "); 
+	    	   
+	    	   //throw new BadCredentialsException("Authentication failed !");
+	       
+	         //  return null;
+	       }
+	       else
+	       {
+	    	   
+	           List<String> segments = result.getSegments();
+	           
+	           String segmentName = segments.get(0);
+	           
+	           logger.info(" segmentName: " + segmentName);
+	       
+	           
+	           List<RoleDTO> roles = (List<RoleDTO>)result.getResponse();
+	           
+	          String principalId = result.getPrincipalId();
+	          String loginState = result.getLoginState();
+	          String firstTimeLogin = result.getFirstTimeLogin();
+	          Integer successLoginCount = result.getSuccessLoginCount();
+	          Integer failedLoginCount = result.getFailedLoginCount();
+	          Date lastLoginAt = result.getLastLoginAt();
+	          
+	          String logInId = result.getLogInId();
+	           
+	        logger.info(" logInId: " + logInId + " principalId: " + principalId);
+	           
+	      
+	      //  logger.info("xri: " + userDTO.getUri());
+	          
+	        logger.info(" user logged in !");
+	  
+	        logger.info(" ££££££££££££££££££££££££££££££££ ");
+	  
+	         logger.info(" user has logged in ! ! !");
+	         
+	         PrimaryKey principal = new PrimaryKey(principalId);
+	         
+	         UserDTO user = userHome.getUser(principal, segmentName);
+	         
+	         if (user != null)
+	           logger.info(" user full name: " + user.getFullName());
+	        // else
+	        	// logger.severe(" error:" + userHome.);
+	         
+	       //  logger.info(" user full name" + user.);
+	         
+	       }
+		
+		
+	}
+	
+
+}

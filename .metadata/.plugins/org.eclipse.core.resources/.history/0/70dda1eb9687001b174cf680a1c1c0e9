@@ -1,0 +1,107 @@
+package com.spacio.spring.scheduler;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.apache.poi.hssf.usermodel.HSSFCell;
+import org.apache.poi.hssf.usermodel.HSSFRow;
+import org.apache.poi.hssf.usermodel.HSSFSheet;
+import org.apache.poi.hssf.usermodel.HSSFWorkbook;
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.CellType;
+import org.apache.poi.ss.usermodel.Row;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.scheduling.annotation.Scheduled;
+import static org.junit.Assert.*;
+
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.Iterator;
+
+import com.spacio.spring.scheduler.service.JobUploadSchedulerService;
+import com.spacio.spring.upload.dto.ResponseDTO;
+
+@SpringBootApplication
+public class JobUploadSchedulerApplication
+{
+	@Autowired
+	private JobUploadSchedulerService service;
+	
+	private static final Logger logger = LogManager.getLogger();
+	
+	public static void main(String[] args)
+	{
+		//SpringApplication.run(JobUploadSchedulerApplication.class, args);
+		
+		excel();
+	}
+	
+	//@Scheduled(fixedDelayString = "${jobUpload.delay}")
+//	public void processJob() throws InterruptedException
+//	{		
+//		ResponseDTO response = service.process();
+//		
+//		assertNotNull("response cant be null", response);
+//		
+//		assertTrue("the result must be true", response.getResult());
+//		
+//		logger.info(response.getDescription());
+//	}
+	
+	@Scheduled(cron = "${cron.value}")
+	//@Scheduled(fixedDelayString = "${jobUpload.delay}")
+	public void moveJobUploadToJobUploadHistory() throws InterruptedException
+	{
+		ResponseDTO response = service.moveJobUploadToJobUploadHistory();
+		
+		assertNotNull("response cant be null", response);
+		
+		assertTrue("the result must be true", response.getResult());
+		
+		logger.info(response.getDescription());
+	}
+	
+	public static void excel()
+	{
+		try {
+			InputStream inputStream = new FileInputStream("C:\\Users\\DELL\\Desktop\\talend_works\\excelformat.xls");
+			
+			HSSFWorkbook wb = new HSSFWorkbook(inputStream);
+			
+			HSSFSheet sheet = wb.getSheetAt(0);
+			
+			logger.info("last index number : " + sheet.getLastRowNum());
+			
+			for(Iterator<Row> row = sheet.iterator(); row.hasNext();)
+			{
+				HSSFRow hr = (HSSFRow)row.next();
+				
+				for(Iterator<Cell> cell = hr.cellIterator(); cell.hasNext();)
+				{
+					HSSFCell cell2 = (HSSFCell) cell.next();
+					
+					//cell2.setCellType(CellType.STRING);
+					
+					if(cell2.getStringCellValue().isBlank())
+					{
+						logger.info(" --- definitely blank --- ");
+						
+						sheet.removeRow(hr);
+					}
+					
+					//System.out.print("cell value: " + cell2.getStringCellValue() + "\t");
+				}
+				
+				System.out.println();
+			}
+			
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+
+}
